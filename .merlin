@@ -1,0 +1,7 @@
+S src
+
+B _build/src
+
+PKG batteries
+PKG eliom.server
+PKG safepass

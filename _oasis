@@ -1,0 +1,21 @@
+OASISFormat: 0.4
+Name: LamaServer
+Version: 1.0
+Synopsis: The LamaUrbain backend
+Authors: The LamaUrbain team
+License: MIT
+BuildTools: ocamlbuild
+Plugins: META (0.3), DevFiles (0.3)
+AlphaFeatures: compiled_setup_ml
+OCamlVersion: >= 3.12.1
+
+Library "LamaUrbain"
+  Path: src
+  Modules:
+    Services,
+    Registration
+  BuildDepends:
+    batteries (>= 2.0),
+    eliom.server (>= 4.0),
+    safepass (>= 1.2)
+  ByteOpt: -w A
