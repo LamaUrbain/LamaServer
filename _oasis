@@ -12,6 +12,7 @@ OCamlVersion: >= 3.12.1
 Library "LamaUrbain"
   Path: src
   Modules:
+    Templates,
     Services,
     Registration
   BuildDepends:

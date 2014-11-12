@@ -1,4 +1,25 @@
 # OASIS_START
+# DO NOT EDIT (digest: b5397ffb45057b86d1455bfb750ce8d0)
+# Ignore VCS directories, you can use the same kind of rule outside
+# OASIS_START/STOP if you want to exclude directories that contains
+# useless stuff for the build process
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Library LamaUrbain
+"src/LamaUrbain.cmxs": use_LamaUrbain
+<src/LamaUrbain.{cma,cmxa}>: oasis_library_lamaurbain_byte
+<src/*.ml{,i}>: oasis_library_lamaurbain_byte
+<src/*.ml{,i}>: package(batteries)
+<src/*.ml{,i}>: package(eliom.server)
+<src/*.ml{,i}>: package(safepass)
 # OASIS_STOP
 
 true: bin_annot, safe_string
