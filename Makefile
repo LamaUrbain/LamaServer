@@ -45,10 +45,11 @@ setup.exe: setup.ml
 
 # OASIS_STOP
 
-STATIC_DIR = data
+STATIC_DIR = /tmp/data
 
 $(STATIC_DIR):
 	mkdir -p $(STATIC_DIR)
+	cp -r data/ $(STATIC_DIR)/
 
 
 run: $(STATIC_DIR)
