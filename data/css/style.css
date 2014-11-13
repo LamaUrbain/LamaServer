@@ -1,15 +1,23 @@
 .jumbo_main {
-  background-color: #fafafa;
-  color: #444;
+  background-color: #fdfdfd;
+  color: #555;
 }
 
 /* Jumbotron adjustment */
+/*  background-color: #f08e4d; */
 
 body {
   padding-top: 50px;
   padding-bottom: 20px;
 }
 
-.header_color {
-  background-color: #fff;
+.navbar-urbain {
+  background-color: #f08e4d;
+}
+
+.navbar-urbain a {
+  color: #fff;
+}
+.navbar-urbain a:visited {
+  color: #fff;
 }
