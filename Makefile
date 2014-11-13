@@ -44,3 +44,14 @@ setup.exe: setup.ml
 .PHONY: build doc test all install uninstall reinstall clean distclean configure
 
 # OASIS_STOP
+
+STATIC_DIR = data
+
+$(STATIC_DIR):
+	mkdir -p $(STATIC_DIR)
+
+
+run: $(STATIC_DIR)
+	ocsigenserver -c ocsigenserver.conf -v
+
+
