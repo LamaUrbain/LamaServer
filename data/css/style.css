@@ -1,0 +1,15 @@
+.jumbo_main {
+  background-color: #fafafa;
+  color: #444;
+}
+
+/* Jumbotron adjustment */
+
+body {
+  padding-top: 50px;
+  padding-bottom: 20px;
+}
+
+.header_color {
+  background-color: #fff;
+}
