@@ -12,9 +12,9 @@ OCamlVersion: >= 3.12.1
 Library "LamaUrbain"
   Path: src
   Modules:
-    Templates,
-    Services,
-    Registration
+    Site_templates,
+    Site_services,
+    Site_registration
   BuildDepends:
     batteries (>= 2.0),
     eliom.server (>= 4.0),
