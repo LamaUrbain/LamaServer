@@ -9,7 +9,8 @@ let navbar =
         [div ~a:[a_class ["navbar-header"]][pcdata  "Lama Urbain"]] ();
     ]
 
-let div_container ~content ~classes = div ~a:[a_class (List.append ["container"] classes)] content
+let div_container ~content ~classes =
+  div ~a:[a_class (List.append ["container"] classes)] content
 
 let get_image ?alt:(alt="Lama Urbain") ~name =
   img ~alt:("Lama Urbain") ~src:(
