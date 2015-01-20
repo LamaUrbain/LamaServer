@@ -32,18 +32,20 @@ let main_jumbotron =
            ];
            div ~a:[a_class["media-body"]]
            [
-             pcdata "Bienvenue sur Lama Urbain, le service d'itinéraire le plus
-             ouvert du web !";
+             pcdata "Bienvenue sur Lama Urbain: le service d'itinéraire le plus ouvert du web !";
+                 br ();
                  br ()
            ]
         ]
     ]
 
+
+
 let format_page content =
   (Eliom_tools.F.html
      ~title:"Lama Urbain"
      ~css:[["css";"style.css"];["css";"bootstrap.css"];["css";"bootstrap-theme.css"]]
+     ~js:[["js";"ol.js"]]
      (body [
-         navbar;
-         main_jumbotron
+         navbar
        ]))
