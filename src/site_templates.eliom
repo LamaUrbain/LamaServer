@@ -19,7 +19,6 @@ let get_image ?alt:(alt="Lama Urbain") ~name =
       ["img"; name]
   ) ()
 
-
 let main_jumbotron =
   div ~a:[a_class ["jumbotron";"jumbo_main"]]
     [div_container
@@ -39,13 +38,12 @@ let main_jumbotron =
         ]
     ]
 
-
-
 let format_page content =
   (Eliom_tools.F.html
      ~title:"Lama Urbain"
      ~css:[["css";"style.css"];["css";"bootstrap.css"];["css";"bootstrap-theme.css"]]
-     ~js:[["js";"ol.js"]]
-     (body [
-         navbar
+     ~js:[["js";"ol.js"];["js";"map.js"]]
+     (body ~onload:{unit{print_endline "lol"}}[
+         navbar;
+         div ~a:[a_class ["map"]; a_id "map"] []
        ]))
