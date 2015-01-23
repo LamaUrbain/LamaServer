@@ -6,17 +6,29 @@ Authors: The LamaUrbain team
 License: MIT
 BuildTools: ocamlbuild
 Plugins: META (0.3), DevFiles (0.3)
-AlphaFeatures: compiled_setup_ml
-OCamlVersion: >= 3.12.1
+AlphaFeatures: ocamlbuild_more_args, compiled_setup_ml, no_automatic_syntax
+XOCamlbuildPluginTags: package(eliom.ocamlbuild)
+OCamlVersion: >= 4.01
 
 Library "LamaUrbain"
   Path: src
   Modules:
-    Site_templates,
+    server/Site_templates,
     Site_services,
     Site_registration
   BuildDepends:
     batteries (>= 2.0),
     eliom.server (>= 4.0),
     safepass (>= 1.2)
+  ByteOpt: -w A
+  DataFiles:
+    ../_build/src/client/lama_server.js
+
+Executable lama_server
+  Install: false
+  Path: src/client
+  MainIs: lama_server.ml
+  BuildDepends:
+    eliom.client
+  CompiledObject: byte
   ByteOpt: -w A
