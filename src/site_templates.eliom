@@ -18,6 +18,7 @@ let format_page content =
 
      ~js:[["ol";"ol.js"];
           ["bower";"jquery";"dist";"jquery.min.js"];
-          ["bower";"bootstrap";"dist";"js";"bootstrap.min.js"]]
+          ["bower";"bootstrap";"dist";"js";"bootstrap.min.js"];
+          ["bower";"less";"dist";"less.min.js"]]
      Html5.F.(body content)
   )

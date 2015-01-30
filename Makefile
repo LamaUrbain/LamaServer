@@ -61,3 +61,6 @@ setup: $(DATADIR)
 	@ mkdir -p data/ol
 	@ wget http://openlayers.org/en/v3.1.1/build/ol.js -O data/ol/ol.js
 	@ bower install
+	@ mkdir -p data/css/
+	@ lessc --compress data/less/style.less > data/css/style.css
+
