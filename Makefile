@@ -55,4 +55,9 @@ $(STATIC_DIR):
 run: $(STATIC_DIR)
 	ocsigenserver -c ocsigenserver.conf -v
 
+DATADIR := data/
 
+setup: $(DATADIR)
+	@ mkdir -p data/ol
+	@ wget http://openlayers.org/en/v3.1.1/build/ol.js -O data/ol/ol.js
+	@ bower install

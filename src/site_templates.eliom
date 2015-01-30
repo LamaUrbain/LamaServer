@@ -1,6 +1,5 @@
 open Eliom_content
 open Html5.D
-open Html5.F
 
 let navbar =
   nav ~a:[a_class ["navbar";"navbar-fixed-top";"navbar-urbain"]]
@@ -27,7 +26,7 @@ let main_jumbotron =
          [
            div ~a:[a_class["media-left"]]
            [
-               get_image ~alt:"Lama Urbain"~name:"lamaurbain_little.png"
+               get_image ~alt:"Lama Urbain" ~name:"lamaurbain_little.png"
            ];
            div ~a:[a_class["media-body"]]
            [
@@ -41,9 +40,13 @@ let main_jumbotron =
 let format_page content =
   (Eliom_tools.F.html
      ~title:"Lama Urbain"
-     ~css:[["css";"style.css"];["css";"bootstrap.css"];["css";"bootstrap-theme.css"]]
-     ~js:[["js";"ol.js"];["js";"map.js"]]
-     (body ~onload:{unit{print_endline "lol"}}[
-         navbar;
-         div ~a:[a_class ["map"]; a_id "map"] []
-       ]))
+
+     ~css:[["bower";"bootstrap";"dist";"css";"bootstrap.min.css"];
+           ["bower";"fontawesome";"css";"font-awesome.min.css"];
+           ["css";"style.css"]]
+
+     ~js:[["ol";"ol.js"];
+          ["bower";"jquery";"dist";"jquery.min.js"];
+          ["bower";"bootstrap";"dist";"js";"bootstrap.min.js"]]
+     Html5.F.(body content)
+  )
