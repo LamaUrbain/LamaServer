@@ -9,8 +9,6 @@ let get_image ?alt:(alt="Lama Urbain") ~name =
   ) ()
 
 let format_page content =
-  let ol =  Html5.F.uri_of_string (fun _ ->
-    "http://openlayers.org/en/v3.1.1/build/ol.js") in
   let ol_script =  make_uri ~service:(Eliom_service.static_dir ()) ["js"; "map.js"] in
   (Eliom_tools.F.html
      ~title:"Lama Urbain"
