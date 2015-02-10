@@ -5,5 +5,5 @@ sudo apt-get install libpcre3-dev libssl-dev
 export OPAMYES=1
 opam init
 eval `opam config env`
-opam install batteries eliom safepass oasis dbm
+opam install batteries eliom safepass oasis dbm mongo
 make
