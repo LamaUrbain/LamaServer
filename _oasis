@@ -15,11 +15,14 @@ Library "LamaUrbain"
   Modules:
     server/Site_templates,
     Site_services,
-    Site_registration
+    Site_registration,
+    Users,
+    Db_mongodb
   BuildDepends:
     batteries (>= 2.0),
     eliom.server (>= 4.0),
-    safepass (>= 1.2)
+    safepass (>= 1.2),
+    mongo
   ByteOpt: -w A
   DataFiles:
     ../_build/src/client/lama_server.js
