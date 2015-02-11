@@ -17,12 +17,14 @@ Library "LamaUrbain"
     Site_services,
     Site_registration,
     Users,
-    Db_mongodb
+    Db_mongodb,
+    Api_services
   BuildDepends:
     batteries (>= 2.0),
     eliom.server (>= 4.0),
     safepass (>= 1.2),
-    mongo
+    mongo,
+    yojson
   ByteOpt: -w A
   DataFiles:
     ../_build/src/client/lama_server.js
