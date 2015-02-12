@@ -17,6 +17,7 @@ Library "LamaUrbain"
     Site_services,
     Site_registration,
     Users,
+    Db,
     Db_mongodb,
     Api_services
   BuildDepends:
