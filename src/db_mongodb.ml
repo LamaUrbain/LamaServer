@@ -3,17 +3,17 @@ let empty = Bson.empty
 let user_collection =
   Mongo.create_local_default "lamaurbain" "users"
 
-let create_user ~username ~password ~email =
+let create_user ~user =
+  let open Users in
   let doc =
     empty
-    |> Bson.add_element "username" (Bson.create_string username)
-    |> Bson.add_element "password" (Bson.create_string password)
-    |> Bson.add_element "email" (Bson.create_string email)
+    |> Bson.add_element "username" (Bson.create_string user.username)
+    |> Bson.add_element "password" (Bson.create_string user.password)
+    |> Bson.add_element "email" (Bson.create_string user.email)
     |> Bson.add_element "id" (Bson.create_int32 @@ Int32.of_int (Mongo.count
     user_collection)) in
   Mongo.insert user_collection [doc];
-  let open Users in
-  {username; password; email}
+  user
 
 let find_user id =
   let query =
