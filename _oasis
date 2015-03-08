@@ -18,13 +18,17 @@ Library "LamaUrbain"
     Site_registration,
     Users,
     Db,
+    Request_data,
     Db_mongodb,
+    Db_macaque,
+    Db_macaque_wrapper,
     Api_services
   BuildDepends:
     batteries (>= 2.0),
     eliom.server (>= 4.0),
     safepass (>= 1.2),
     mongo,
+    macaque,
     yojson
   ByteOpt: -w A
   DataFiles:
