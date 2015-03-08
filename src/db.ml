@@ -1,12 +1,12 @@
 module type DBENGINE =
 sig
-  val create_user : user:Users.t -> Users.t
-  val find_user : int -> Users.t option
+  val create_user : username:string -> password:string -> email:string -> Users.t Lwt.t
+  val find_user : int -> Users.t option Lwt.t
 end
 
 module Db =
   functor (M : DBENGINE) ->
   struct
-    let create_user ~user = M.create_user user
-    let find_user id = M.find_user id
+    let create_user = M.create_user
+    let find_user = M.find_user
   end

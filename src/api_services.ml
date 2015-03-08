@@ -1,4 +1,4 @@
-module D = Db.Db(Db_mongodb)
+module D = Db.Db(Db_macaque)
 
 let (>>=) = Lwt.(>>=)
 
@@ -46,7 +46,8 @@ let read_handler id_opt () =
     send_error ~code:404 "Missing id"
   | Some id ->
     (
-      match D.find_user id with
+      D.find_user id
+      >>= function
       | Some u ->
         send_json
           ~code:200
@@ -65,15 +66,21 @@ let create_handler _ (content_type, raw_content_opt) =
     | None ->
       send_error ~code:400 "Body content is missing"
     | Some raw_content ->
-      read_raw_content raw_content >>= fun location_str ->
+      read_raw_content raw_content
+      >>= fun location_str ->
       Lwt.catch
         (fun () ->
-           let user = Yojson.from_string<Users.t> location_str in
-           D.create_user ~user;
-           send_success ())
+           let open Request_data in
+           let user = Yojson.from_string<user_creation> location_str in
+           D.create_user
+             ~username:user.username
+             ~password:user.password
+             ~email:user.email
+           >>= fun _ -> send_success ())
         (function
           | Deriving_Yojson.Failed ->
-            send_error ~code:400 "Provided JSON is not valid")
+            send_error ~code:400 "Provided JSON is not valid"
+        )
 
 let _ = Eliom_registration.Any.register read_service read_handler
 

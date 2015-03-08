@@ -1,2 +1,2 @@
-val create_user : user:Users.t -> Users.t
-val find_user : int -> Users.t option
+val create_user : username:string -> password:string -> email:string -> Users.t Lwt.t
+val find_user : int -> Users.t option Lwt.t
