@@ -7,6 +7,10 @@
 #include <osmscout/POIService.h>
 #include <osmscout/RoutePostprocessor.h>
 #include <osmscout/util/Geometry.h>
+#include <osmscout/util/Tiling.h>
+
+#define WIDTH 256
+#define HEIGHT 256
 
 class Painter : public osmscout::MapPainterCairo {
 public:
@@ -45,6 +49,18 @@ static void GetCarSpeedTable(std::map<std::string,double>& map)
 
 static const double DPI=96.0;
 
+static bool getZoom(const char* arg, osmscout::Magnification& magnification) {
+    uint32_t z;
+
+    if (!osmscout::StringToNumber(arg, z)) {
+        return false;
+    }
+
+    magnification.SetLevel(z);
+
+    return true;
+}
+
 int main(int argc, char* argv[]) {
     osmscout::Vehicle                         vehicle=osmscout::vehicleCar;
     std::string                               map;
@@ -65,53 +81,44 @@ int main(int argc, char* argv[]) {
 
     std::string   style;
     std::string   output;
-    size_t        width,height;
-    double        zoom;
+    size_t width = WIDTH;
+    size_t height = HEIGHT;
+    osmscout::Magnification magnification;
 
-    if (argc!=11) {
-        std::cerr << "DrawMap <map directory> <style-file> <width> <height> <start lon> <start lat> <target lon> <target lat> <zoom> <output>" << std::endl;
+    if (argc!=9) {
+        std::cerr << "DrawMap <map directory> <style-file> <start lon> <start lat> <target lon> <target lat> <zoom> <output>" << std::endl;
         return 1;
     }
 
     map=argv[1];
     style=argv[2];
 
-    if (!osmscout::StringToNumber(argv[3],width)) {
-        std::cerr << "width is not numeric!" << std::endl;
-        return 1;
-    }
-
-    if (!osmscout::StringToNumber(argv[4],height)) {
-        std::cerr << "height is not numeric!" << std::endl;
-        return 1;
-    }
-
-    if (sscanf(argv[5],"%lf",&startLon)!=1) {
+    if (sscanf(argv[3],"%lf",&startLon)!=1) {
         std::cerr << "Start lon is not numeric!" << std::endl;
         return 1;
     }
 
-    if (sscanf(argv[6],"%lf",&startLat)!=1) {
+    if (sscanf(argv[4],"%lf",&startLat)!=1) {
         std::cerr << "Start lat is not numeric!" << std::endl;
         return 1;
     }
 
-    if (sscanf(argv[7],"%lf",&targetLon)!=1) {
+    if (sscanf(argv[5],"%lf",&targetLon)!=1) {
         std::cerr << "Target lon is not numeric!" << std::endl;
         return 1;
     }
 
-    if (sscanf(argv[8],"%lf",&targetLat)!=1) {
+    if (sscanf(argv[6],"%lf",&targetLat)!=1) {
         std::cerr << "Target lat is not numeric!" << std::endl;
         return 1;
     }
 
-    if (sscanf(argv[9],"%lf",&zoom)!=1) {
+    if (!getZoom(argv[7], magnification)) {
         std::cerr << "zoom is not numeric!" << std::endl;
         return 1;
     }
 
-    output=argv[10];
+    output=argv[8];
 
     osmscout::DatabaseParameter databaseParameter;
     osmscout::DatabaseRef       database(new osmscout::Database(databaseParameter));
@@ -274,7 +281,7 @@ int main(int argc, char* argv[]) {
 
             projection.Set(startLon,
                            startLat,
-                           osmscout::Magnification(zoom),
+                           magnification,
                            DPI,
                            width,
                            height);
