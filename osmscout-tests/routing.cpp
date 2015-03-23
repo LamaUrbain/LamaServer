@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
     osmscout::Magnification magnification;
 
     if (argc!=9) {
-        std::cerr << "DrawMap <map directory> <style-file> <start lon> <start lat> <target lon> <target lat> <zoom> <output>" << std::endl;
+        std::cerr << "DrawMap <map directory> <style-file> <start lon> <start lat> <target lon> <target lat> <zoom> <output-dir>" << std::endl;
         return 1;
     }
 
@@ -221,102 +221,79 @@ int main(int argc, char* argv[]) {
     if (!styleConfig->Load(style)) {
         std::cerr << "Cannot open style" << std::endl;
     }
-    /*
-    osmscout::POIServiceRef     poiService(new osmscout::POIService(database));
 
-    osmscout::TypeSet                nodeTypes(*typeConfig);
-    osmscout::TypeSet                wayTypes(*typeConfig);
-    osmscout::TypeSet                areaTypes(*typeConfig);
+    osmscout::Way way_raw;
 
-    std::vector<osmscout::NodeRef> nodes;
-    std::vector<osmscout::WayRef>  ways;
-    std::vector<osmscout::AreaRef> areas;
-
-    if (!poiService->GetPOIsInArea(std::min(startLon,targetLon),
-                                   std::min(startLat,targetLat),
-                                   std::max(startLon,targetLon),
-                                   std::max(startLon,targetLat),
-                                   nodeTypes,
-                                   nodes,
-                                   wayTypes,
-                                   ways,
-                                   areaTypes,
-                                   areas)) {
-        std::cerr << "Cannot load data from database" << std::endl;
+    if (!router->TransformRouteDataToWay(data, way_raw)) {
+        std::cerr << "LOL" << std::endl;
 
         return 1;
     }
 
-    std::cout << ways.size() << std::endl;
-    */
-    osmscout::Way way_raw;
+    std::set<std::pair<size_t, size_t> > coords;
 
-    if(!router->TransformRouteDataToWay(data, way_raw)) {
-        std::cerr << "LOL" << std::endl;
-        return 1;
-
+    for (std::vector<osmscout::GeoCoord>::iterator it = way_raw.nodes.begin(); it != way_raw.nodes.end(); ++it) {
+        size_t x = osmscout::LonToTileX(it->lon, magnification);
+        size_t y = osmscout::LatToTileY(it->lat, magnification);
+        coords.insert(std::pair<size_t, size_t>(x, y));
     }
 
     osmscout::WayRef way(new osmscout::Way(way_raw));
 
-    cairo_surface_t *surface;
-    cairo_t         *cairo;
+    {
+        osmscout::TileProjection projection;
+        osmscout::MapParameter drawParameter;
+        osmscout::AreaSearchParameter searchParameter;
+        Painter painter(styleConfig);
 
-    surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32,width,height);
+        osmscout::MapData data;
 
-    if (surface!=NULL) {
-        cairo=cairo_create(surface);
+        drawParameter.SetFontSize(3.0);
+        data.poiWays.push_back(way);
 
-        if (cairo!=NULL) {
-            cairo_set_source_rgba(cairo, 0, 0, 0, 0);
-            cairo_fill(cairo);
+        for (auto coord : coords) {
+            cairo_surface_t *surface;
+            cairo_t         *cairo;
 
-            osmscout::MercatorProjection  projection;
-            osmscout::MapParameter        drawParameter;
-            osmscout::AreaSearchParameter searchParameter;
-            osmscout::MapData             data;
-            Painter     painter(styleConfig);
+            surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32,width,height);
 
-            drawParameter.SetFontSize(3.0);
+            if (surface!=NULL) {
+                cairo=cairo_create(surface);
 
-            projection.Set(startLon,
-                           startLat,
-                           magnification,
-                           DPI,
-                           width,
-                           height);
-            /*
-            mapService->GetObjects(searchParameter,
-                                   styleConfig,
-                                   projection,
-                                   data);
-            */
-/*            data.poiWays = std::list<osmscout::WayRef>(ways.begin(), ways.end());
-            data.poiNodes = std::list<osmscout::NodeRef>(nodes.begin(), nodes.end());
-            data.poiAreas = std::list<osmscout::AreaRef>(areas.begin(), areas.end());
-*/
+                if (cairo!=NULL) {
+                    cairo_set_source_rgba(cairo, 0, 0, 0, 0);
+                    cairo_fill(cairo);
 
-            data.poiWays.push_back(way);
+                    projection.Set(coord.first,
+                                   coord.second,
+                                   magnification,
+                                   DPI,
+                                   width,
+                                   height);
 
-            if (painter.DrawMap(projection,
-                                drawParameter,
-                                data,
-                                cairo)) {
-                if (cairo_surface_write_to_png(surface,output.c_str())!=CAIRO_STATUS_SUCCESS) {
-                    std::cerr << "Cannot write PNG" << std::endl;
+                    if (painter.DrawMap(projection,
+                                        drawParameter,
+                                        data,
+                                        cairo)) {
+                        char file[512];
+                        sprintf(file, "%s/%d-%d.png", output.c_str(), coord.first, coord.second);
+                        if (cairo_surface_write_to_png(surface,file)!=CAIRO_STATUS_SUCCESS) {
+                            std::cerr << "Cannot write PNG" << std::endl;
+                        }
+                    }
+
+                    cairo_destroy(cairo);
                 }
+                else {
+                    std::cerr << "Cannot create cairo cairo" << std::endl;
+                }
+
+                cairo_surface_destroy(surface);
             }
-
-            cairo_destroy(cairo);
+            else {
+                std::cerr << "Cannot create cairo surface" << std::endl;
+            }
         }
-        else {
-            std::cerr << "Cannot create cairo cairo" << std::endl;
-        }
-
-        cairo_surface_destroy(surface);
-    }
-    else {
-        std::cerr << "Cannot create cairo surface" << std::endl;
     }
 
     return 0;
