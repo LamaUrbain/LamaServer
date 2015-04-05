@@ -53,7 +53,7 @@ $(STATIC_DIR):
 
 
 run: $(STATIC_DIR)
-	ocsigenserver -c ocsigenserver.conf -v
+	CAML_LD_LIBRARY_PATH="${CAML_LD_LIBRARY_PATH}:_build/src" ocsigenserver -c ocsigenserver.conf -v
 
 DATADIR := data/
 
