@@ -22,16 +22,19 @@ Library "LamaUrbain"
     Db_mongodb,
     Db_macaque,
     Db_macaque_wrapper,
-    Api_services
+    Api_services,
+    Itinerary
   CSources:
     routing.c
   BuildDepends:
+    cairo2,
     ctypes.foreign,
     batteries (>= 2.0),
     eliom.server (>= 4.0),
     safepass (>= 1.2),
     mongo,
     macaque,
+    monomorphic,
     yojson
 #  CCOpt: `pkg-config --cflags libosmscout-map-cairo`
 #  CCLib: `pkg-config --libs libosmscout-map-cairo`
