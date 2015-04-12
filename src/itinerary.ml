@@ -1,14 +1,18 @@
-open BatteriesExceptionless
 open Monomorphic
 
-type t = int
+type coordinate = {x : int; y : int} deriving (Yojson)
 
-type coordinate = {x : int; y : int}
+open BatteriesExceptionless
+
+type t = int
 
 module Zoomlevel = struct
   type t = int
 
-  let create x = x
+  let create x =
+    if Int.(x < 1 || x > 16) then
+      failwith "LOL LOL";
+    x
 end
 
 module Cairo_bind : sig
@@ -77,7 +81,14 @@ let cache = new Cache.cache (assert false) 500
 
 let lol_cache = Hashtbl.create 16
 
-let create ~starting_point:(startLat, startLon) ~ending_point:(targetLat, targetLon) =
+let create coords =
+  let open Request_data in
+  let (startLat, startLon, targetLat, targetLon) =
+    match coords with
+    | {points = [{content = GeoCoordinates {latitude = startLat; longitude = startLon}}; {content = GeoCoordinates {latitude = targetLat; longitude = targetLon}}]} ->
+        (startLat, startLon, targetLat, targetLon)
+    | _ -> failwith "LOL"
+  in
   let res = Cpp.create startLat startLon targetLat targetLon in
   let id = Hashtbl.length lol_cache in
   Hashtbl.add lol_cache id res;
