@@ -9,9 +9,6 @@
 #include <osmscout/util/Geometry.h>
 #include <osmscout/util/Tiling.h>
 
-#define WIDTH 256
-#define HEIGHT 256
-
 struct Itinerary {
     osmscout::WayRef way;
     osmscout::StyleConfigRef styleConfig;
@@ -208,7 +205,9 @@ void iterCoordinates(const Itinerary* itinerary,
 }
 
 extern "C"
-bool paint(size_t x, size_t y, const Itinerary* itinerary,
+bool paint(size_t x, size_t y,
+           size_t width, size_t height,
+           const Itinerary* itinerary,
            const osmscout::Magnification* magnification,
            cairo_t* cairo) {
     osmscout::TileProjection projection;
@@ -221,7 +220,7 @@ bool paint(size_t x, size_t y, const Itinerary* itinerary,
     drawParameter.SetFontSize(3.0);
     data.poiWays.push_back(itinerary->way);
 
-    projection.Set(x, y, *magnification, DPI, WIDTH, HEIGHT);
+    projection.Set(x, y, *magnification, DPI, width, height);
 
     return painter.DrawMap(projection, drawParameter, data, cairo);
 }

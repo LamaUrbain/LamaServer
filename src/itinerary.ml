@@ -37,7 +37,7 @@ module Cpp : sig
   val create : float -> float -> float -> float -> itinerary
   val get_magnification : Unsigned.UInt32.t -> magnification
   val iter_coordinates : itinerary -> magnification -> (Unsigned.Size_t.t -> Unsigned.Size_t.t -> unit) -> unit
-  val paint : Unsigned.Size_t.t -> Unsigned.Size_t.t -> itinerary -> magnification -> Cairo.context -> bool
+  val paint : x:int -> y:int -> width:int -> height:int -> itinerary:itinerary -> magnification:magnification -> context:Cairo.context -> bool
 end = struct
   open Ctypes
   open Foreign
@@ -55,11 +55,15 @@ end = struct
     foreign "iterCoordinates" (ptr void @-> ptr void @-> funptr (size_t @-> size_t @-> returning void) @-> returning void)
 
   let paint =
-    foreign "paint" (size_t @-> size_t @-> ptr void @-> ptr void @-> Cairo_bind.t @-> returning bool)
+    foreign "paint" (size_t @-> size_t @-> size_t @-> size_t @-> ptr void @-> ptr void @-> Cairo_bind.t @-> returning bool)
 
-  let paint a b c d e =
-    let e = Cairo_bind.create e in
-    paint a b c d e
+  let paint ~x ~y ~width ~height ~itinerary ~magnification ~context =
+    let context = Cairo_bind.create context in
+    let x = Unsigned.Size_t.of_int x in
+    let y = Unsigned.Size_t.of_int y in
+    let width = Unsigned.Size_t.of_int width in
+    let height = Unsigned.Size_t.of_int height in
+    paint x y width height itinerary magnification context
 end
 
 (*
@@ -90,4 +94,16 @@ let get_coordinates ~zoom id =
   Hashtbl.fold (fun (x, y) () acc -> {x = to_int x; y = to_int y} :: acc) set []
 
 let get_image ~x ~y ~z id =
-  assert false
+  let itinerary = Hashtbl.find lol_cache id in
+  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  let width = 256 in
+  let height = 256 in
+  let surface = Cairo.Image.create Cairo.Image.ARGB32 ~width ~height in
+  let context = Cairo.create surface in
+  let magnification = Cpp.get_magnification (Unsigned.UInt32.of_int z) in
+  if Cpp.paint x y width height itinerary magnification context then
+    let buf = Buffer.create 500_000 in
+    Cairo.PNG.write_to_stream surface ~output:(Buffer.add_string buf);
+    Buffer.contents buf
+  else
+    failwith "lol"
