@@ -51,8 +51,8 @@ static void GetCarSpeedTable(std::map<std::string,double>& map)
 
 static const double DPI=96.0;
 
-const std::string map = "../../../libosmscout/maps/picardie-latest";
-const std::string style = "../../../libosmscout/stylesheets/standard.oss";
+const std::string map = "../../libosmscout/maps/picardie-latest";
+const std::string style = "../../libosmscout/stylesheets/standard.oss";
 
 extern "C"
 struct Itinerary* createItinerary(double startLat, double startLon,
