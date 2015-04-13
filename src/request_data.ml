@@ -4,13 +4,13 @@ type user_creation =
     email : string;
   } [@@deriving yojson]
 
-type geo_coord =
-  { latitude : float
-  ; longitude : float
-  }
+type coord =
+  { typ [@key "type"] : string
+  ; content : Yojson.Safe.json
+  } [@@deriving yojson]
 
 type itinerary_creation =
-  { points : Yojson.Safe.json list
+  { points : coord list
 (*  ; settings : settings *)
   } [@@deriving yojson]
 

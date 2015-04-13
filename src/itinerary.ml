@@ -82,18 +82,17 @@ let cache = new Cache.cache (assert false) 500
 
 let lol_cache = Hashtbl.create 16
 
-let parse_coord = function
-  | `Assoc [("type", `String "address"); ("content", `String address)]
-  | `Assoc [("content", `String address); ("type", `String "address")] ->
+let parse_coord x =
+  let open Request_data in
+  match x with
+  | {typ = "address"; content = `String address} ->
       (* `Address address *)
       assert false
-  | `Assoc [("type", `String "coord"); ("content", `Assoc [("latitude", `Float lat); ("longitude", `Float lon)])]
-  | `Assoc [("type", `String "coord"); ("content", `Assoc [("longitude", `Float lon); ("latitude", `Float lat)])]
-  | `Assoc [("content", `Assoc [("latitude", `Float lat); ("longitude", `Float lon)]); ("type", `String "coord")]
-  | `Assoc [("content", `Assoc [("longitude", `Float lon); ("latitude", `Float lat)]); ("type", `String "coord")] ->
+  | {typ = "coord"; content = `Assoc [("latitude", `Float lat); ("longitude", `Float lon)]}
+  | {typ = "coord"; content = `Assoc [("longitude", `Float lon); ("latitude", `Float lat)]} ->
       `Coord (lat, lon)
-  | json ->
-      failwith ("Parse failed: " ^ Yojson.Safe.to_string json)
+  | _ ->
+      failwith "Parse failed"
 
 let create coords =
   let (`Coord (startLat, startLon), `Coord (targetLat, targetLon)) =
