@@ -224,3 +224,15 @@ bool paint(size_t x, size_t y,
 
     return painter.DrawMap(projection, drawParameter, data, cairo);
 }
+
+
+
+#include <caml/mlvalues.h>
+#include <caml/alloc.h>
+#include <stdint.h>
+
+extern "C"
+value cairo_address(value v)
+{
+    return caml_copy_nativeint(*(intptr_t *)Data_custom_val(v));
+}
