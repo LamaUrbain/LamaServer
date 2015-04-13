@@ -55,8 +55,8 @@ const std::string map = "../../libosmscout/maps/picardie-latest";
 const std::string style = "../../libosmscout/stylesheets/standard.oss";
 
 extern "C"
-struct Itinerary* createItinerary(double startLat, double startLon,
-                                  double targetLat, double targetLon) {
+struct Itinerary* createItinerary(float startLat, float startLon,
+                                  float targetLat, float targetLon) {
     osmscout::Vehicle vehicle = osmscout::vehicleCar;
 
     osmscout::ObjectFileRef startObject;
