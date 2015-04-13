@@ -3,7 +3,7 @@
 
 true: bin_annot, safe_string
 
-<src/*.ml{,i}>: no_extra_syntaxes, thread, syntax(camlp4o), package(deriving.syntax), package(deriving-yojson.syntax), package(js_of_ocaml.deriving.syntax), package(js_of_ocaml.syntax)
+<src/*.ml{,i}>: no_extra_syntaxes, thread, package(ppx_deriving_yojson)
 <**/*.eliom>: no_extra_syntaxes, package(js_of_ocaml.syntax), package(js_of_ocaml.deriving.syntax)
 "src/client/lama_server.js": package(eliom.client)
-"src/db_macaque.ml": package(macaque.syntax)
+"src/db_macaque.ml": syntax(camlp4o), package(macaque.syntax)

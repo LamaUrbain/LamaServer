@@ -51,7 +51,7 @@ let read_handler id_opt () =
       | Some u ->
         send_json
           ~code:200
-          (Yojson.to_string<Users.t> u)
+          (Yojson.Safe.to_string (Users.to_yojson u))
       | _ ->
         send_error
           ~code:404
@@ -66,24 +66,25 @@ let wrap_body_json f get (content_type, raw_content_opt) =
     | None ->
         send_error ~code:400 "Body content is missing"
     | Some raw_content ->
-        read_raw_content raw_content >>= fun location_str ->
-        Lwt.catch
-          (fun () -> f get location_str)
-          (function
-            | Deriving_Yojson.Failed ->
-                send_error ~code:400 "Provided JSON is not valid"
-          )
+        read_raw_content raw_content >>= f get
+
+let wrap_errors f = function
+  | `Ok x -> f x
+  | `Error x -> send_error ~code:400 ("Provided JSON is not valid: " ^ x)
 
 let create_handler =
   wrap_body_json
     (fun _ location_str ->
        let open Request_data in
-       let user = Yojson.from_string<user_creation> location_str in
-       D.create_user
-         ~username:user.username
-         ~password:user.password
-         ~email:user.email
-       >>= fun _ -> send_success ()
+       wrap_errors
+         (fun user ->
+            D.create_user
+              ~username:user.username
+              ~password:user.password
+              ~email:user.email
+            >>= fun _ -> send_success ()
+         )
+         (user_creation_of_yojson (Yojson.Safe.from_string location_str))
     )
 
 let _ = Eliom_registration.Any.register read_service read_handler
@@ -93,62 +94,52 @@ let _ = Eliom_registration.Any.register create_service create_handler
 open Eliom_parameter
 
 let () =
-  let aux () location_str =
-    let open Request_data in
-    let coords = Yojson.from_string<itinerary_creation> location_str in
-    let id = Itinerary.create coords in
-    send_json ~code:200 (Yojson.to_string<id> {id})
+  let post_handler get post =
+    match get with
+    | [] ->
+        let aux post =
+          let open Request_data in
+          wrap_errors
+            (fun coords ->
+               let id = Itinerary.create coords in
+               send_json ~code:200 (Yojson.Safe.to_string (id_to_yojson {id}))
+            )
+            (itinerary_creation_of_yojson (Yojson.Safe.from_string post))
+        in
+        wrap_body_json (fun () -> aux) () post
+    | _ ->
+        Eliom_registration.String.send ~code:404 ("", "")
   in
-  let fallback =
-    Eliom_service.Http.service
-      ~path:["itineraries"]
-      ~get_params:unit
-      ()
+  let get_handler get () =
+    match get with
+    | [id; "coordinates"; zoom] ->
+        let id = int_of_string id in
+        let zoom = int_of_string zoom in
+        let zoom = Itinerary.Zoomlevel.create zoom in
+        let coords = Itinerary.get_coordinates ~zoom id in
+        send_json ~code:200 (Yojson.Safe.to_string (Itinerary.coordinate_list_to_yojson coords))
+    | [id; "tiles"; z; x; y] ->
+        let id = int_of_string id in
+        let z = int_of_string z in
+        let x = int_of_string x in
+        let y = int_of_string y in
+        let z = Itinerary.Zoomlevel.create z in
+        let image = Itinerary.get_image ~x ~y ~z id in
+        Eliom_registration.String.send (image, "image/png")
+    | _ ->
+        Eliom_registration.String.send ~code:404 ("", "")
   in
   let service =
+    Eliom_service.Http.service
+      ~path:["itineraries"]
+      ~get_params:(suffix (all_suffix "params"))
+      ()
+  in
+  Eliom_registration.Any.register ~service get_handler;
+  let service =
     Eliom_service.Http.post_service
-      ~fallback
+      ~fallback:service
       ~post_params:raw_post_data
       ()
   in
-  Eliom_registration.Any.register ~service (wrap_body_json aux)
-
-let () =
-  let aux (id, (_, zoom)) () =
-    let zoom = Itinerary.Zoomlevel.create zoom in
-    let coords = Itinerary.get_coordinates ~zoom id in
-    send_json ~code:200 (Yojson.to_string<Itinerary.coordinate list> coords)
-  in
-  let fallback =
-    Eliom_service.Http.service
-      ~path:["itineraries"]
-      ~get_params:(suffix (int "id" ** regexp (Netstring_pcre.regexp "coordinates") "" ~to_string:(fun x -> x) "const" ** int "zoomlevel"))
-      ()
-  in
-  let service =
-    Eliom_service.Http.post_service
-      ~fallback
-      ~post_params:unit
-      ()
-  in
-  Eliom_registration.Any.register ~service aux
-
-let () =
-  let aux (id, (_, (z, (x, y)))) () =
-    let z = Itinerary.Zoomlevel.create z in
-    let image = Itinerary.get_image ~x ~y ~z id in
-    Lwt.return (image, "image/png")
-  in
-  let fallback =
-    Eliom_service.Http.service
-      ~path:["itineraries"]
-      ~get_params:(suffix (int "id" ** regexp (Netstring_pcre.regexp "tiles") "" ~to_string:(fun x -> x) "const" ** int "zoomlevel" ** int "x" ** int "y"))
-      ()
-  in
-  let service =
-    Eliom_service.Http.post_service
-      ~fallback
-      ~post_params:unit
-      ()
-  in
-  Eliom_registration.String.register ~service aux
+  Eliom_registration.Any.register ~service post_handler

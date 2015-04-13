@@ -3,4 +3,4 @@ type t =
     password : string;
     email : string;
     id : int;
-  } deriving (Yojson)
+  } [@@deriving yojson]

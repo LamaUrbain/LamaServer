@@ -1,6 +1,7 @@
 open Monomorphic
 
-type coordinate = {x : int; y : int} deriving (Yojson)
+type coordinate = {x : int; y : int} [@@deriving yojson]
+type coordinate_list = coordinate list [@@deriving yojson]
 
 open BatteriesExceptionless
 
@@ -81,12 +82,25 @@ let cache = new Cache.cache (assert false) 500
 
 let lol_cache = Hashtbl.create 16
 
+let parse_coord = function
+  | `Assoc [("type", `String "address"); ("content", `String address)]
+  | `Assoc [("content", `String address); ("type", `String "address")] ->
+      (* `Address address *)
+      assert false
+  | `Assoc [("type", `String "coord"); ("content", `Assoc [("latitude", `Float lat); ("longitude", `Float lon)])]
+  | `Assoc [("type", `String "coord"); ("content", `Assoc [("longitude", `Float lon); ("latitude", `Float lat)])]
+  | `Assoc [("content", `Assoc [("latitude", `Float lat); ("longitude", `Float lon)]); ("type", `String "coord")]
+  | `Assoc [("content", `Assoc [("longitude", `Float lon); ("latitude", `Float lat)]); ("type", `String "coord")] ->
+      `Coord (lat, lon)
+  | json ->
+      failwith ("Parse failed: " ^ Yojson.Safe.to_string json)
+
 let create coords =
-  let open Request_data in
-  let (startLat, startLon, targetLat, targetLon) =
+  let (`Coord (startLat, startLon), `Coord (targetLat, targetLon)) =
+    let open Request_data in
     match coords with
-    | {points = [{content = GeoCoordinates {latitude = startLat; longitude = startLon}}; {content = GeoCoordinates {latitude = targetLat; longitude = targetLon}}]} ->
-        (startLat, startLon, targetLat, targetLon)
+    | {points = [start_coord; target_coord]} ->
+        (parse_coord start_coord, parse_coord target_coord)
     | _ -> failwith "LOL"
   in
   let res = Cpp.create startLat startLon targetLat targetLon in

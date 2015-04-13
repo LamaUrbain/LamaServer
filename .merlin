@@ -8,3 +8,4 @@ PKG safepass
 PKG cairo2
 PKG ctypes.foreign
 PKG monomorphic
+PKG yojson

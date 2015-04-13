@@ -1,6 +1,7 @@
 type t = int
 
-type coordinate = {x : int; y : int} deriving (Yojson)
+type coordinate = {x : int; y : int} [@@deriving yojson]
+type coordinate_list = coordinate list [@@deriving yojson]
 
 module Zoomlevel : sig
   type t
@@ -10,6 +11,6 @@ end
 
 val create : Request_data.itinerary_creation -> t
 
-val get_coordinates : zoom:Zoomlevel.t -> t -> coordinate list
+val get_coordinates : zoom:Zoomlevel.t -> t -> coordinate_list
 
 val get_image : x:int -> y:int -> z:Zoomlevel.t -> t -> string
