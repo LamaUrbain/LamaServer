@@ -10,9 +10,9 @@ opam pin add macaque https://github.com/ocsigen/macaque.git
 opam pin add ocsigenserver https://github.com/ocsigen/ocsigenserver.git#cohttp_rebased
 opam pin add eliom https://github.com/ocsigen/eliom.git#cohttp
 opam install batteries eliom safepass oasis dbm mongo cairo2 macaque monomorphic ppx_deriving_yojson ctypes ctypes-foreign batteries
-git clone git://git.code.sf.net/p/libosmscout/code libosmscout
+git clone https://github.com/LamaUrbain/libosmscout
 cd libosmscout
-make full
+make full-install
 make install
 cd ..
 make
