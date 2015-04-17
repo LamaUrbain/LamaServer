@@ -1,4 +1,5 @@
 echo "yes" | sudo add-apt-repository ppa:avsm/ocaml42+opam12
+echo "yes" | sudo add-apt-repository ppa:costamagnagianfranco/autoconf
 sudo apt-get update -qq
 sudo apt-get install -qq ocaml ocaml-native-compilers camlp4-extra opam
 sudo apt-get install build-essential autoconf autotools-dev automake libtool libpango1.0-dev libcairo2-dev
