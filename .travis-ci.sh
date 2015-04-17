@@ -21,6 +21,5 @@ opam install batteries eliom safepass oasis dbm mongo cairo2 macaque monomorphic
 git clone https://github.com/LamaUrbain/libosmscout
 cd libosmscout
 make full-install
-make install
 cd ..
 make
