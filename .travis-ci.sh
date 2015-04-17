@@ -8,7 +8,7 @@ tar xvf autoconf-2.69.tar.gz
 cd autoconf-2.69
 ./configure
 make
-make install
+sudo make install
 cd ..
 export OPAMYES=1
 opam init
