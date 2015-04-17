@@ -22,4 +22,6 @@ git clone https://github.com/LamaUrbain/libosmscout
 cd libosmscout
 make full-install
 cd ..
+echo 'true: -traverse' >> _tags
+echo 'true: not_hygienic' >> _tags
 make
