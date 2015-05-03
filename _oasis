@@ -13,6 +13,8 @@ OCamlVersion: >= 4.01
 Library "LamaUrbain"
   Path: src
   Modules:
+    Configfile,
+    Config,
     server/Site_templates,
     Site_services,
     Site_registration,

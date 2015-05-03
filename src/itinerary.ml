@@ -102,8 +102,7 @@ let create coords =
         (parse_coord start_coord, parse_coord target_coord)
     | _ -> failwith "LOL"
   in
-  let map = "../../libosmscout/maps/picardie-latest" in
-  let style = "../../libosmscout/stylesheets/standard.oss" in
+  let map = Config.map and style = Config.style in
   let res = Cpp.create startLat startLon targetLat targetLon map style in
   let id = Hashtbl.length lol_cache in
   Hashtbl.add lol_cache id res;
