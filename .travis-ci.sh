@@ -21,7 +21,6 @@ cd libosmscout
 make full-install
 cd Import
 ./autogen.sh
-export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig"
 ./configure
 make
 cd ../maps
