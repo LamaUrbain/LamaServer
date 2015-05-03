@@ -3,6 +3,7 @@ sudo apt-get update -qq
 sudo apt-get install -qq ocaml ocaml-native-compilers camlp4-extra opam
 sudo apt-get install build-essential autotools-dev automake libtool libpango1.0-dev libcairo2-dev libxml2-dev libprotobuf-dev protobuf-compiler
 sudo apt-get install libpcre3-dev libssl-dev libgdbm-dev libffi-dev
+sudo apt-get install postgresql
 wget http://ftpmirror.gnu.org/autoconf/autoconf-2.69.tar.gz
 tar xvf autoconf-2.69.tar.gz
 cd autoconf-2.69
@@ -31,6 +32,7 @@ echo 'true: not_hygienic' >> _tags
 make
 sed -i 's/MAP/libosmscout\/maps\/picardie-latest/g' ocsigenserver.conf
 sed -i 's/STYLE/libosmscout\/stylesheets\/standard.oss/g' ocsigenserver.conf
+sudo -u postgres psql -f createdb.sql
 make run
 sleep 10
 curl http://localhost:8080/users/0 -o check
