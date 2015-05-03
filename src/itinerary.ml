@@ -39,7 +39,7 @@ module Cpp : sig
   type magnification
   type itinerary
 
-  val create : float -> float -> float -> float -> itinerary
+  val create : float -> float -> float -> float -> string -> string -> itinerary
   val get_magnification : Unsigned.UInt32.t -> magnification
   val iter_coordinates : itinerary -> magnification -> (Unsigned.Size_t.t -> Unsigned.Size_t.t -> unit) -> unit
   val paint : x:int -> y:int -> width:int -> height:int -> itinerary:itinerary -> magnification:magnification -> context:Cairo.context -> bool
@@ -51,7 +51,7 @@ end = struct
   type itinerary = unit ptr
 
   let create =
-    foreign "createItinerary" (float @-> float @-> float @-> float @-> returning (ptr void))
+    foreign "createItinerary" (float @-> float @-> float @-> float @-> string @-> string @-> returning (ptr void))
 
   let get_magnification =
     foreign "getMagnification" (uint32_t @-> returning (ptr void))
@@ -102,7 +102,9 @@ let create coords =
         (parse_coord start_coord, parse_coord target_coord)
     | _ -> failwith "LOL"
   in
-  let res = Cpp.create startLat startLon targetLat targetLon in
+  let map = "../../libosmscout/maps/picardie-latest" in
+  let style = "../../libosmscout/stylesheets/standard.oss" in
+  let res = Cpp.create startLat startLon targetLat targetLon map style in
   let id = Hashtbl.length lol_cache in
   Hashtbl.add lol_cache id res;
   id

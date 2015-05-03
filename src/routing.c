@@ -51,12 +51,10 @@ static void GetCarSpeedTable(std::map<std::string,double>& map)
 
 static const double DPI=96.0;
 
-const std::string map = "../../libosmscout/maps/picardie-latest";
-const std::string style = "../../libosmscout/stylesheets/standard.oss";
-
 extern "C"
 struct Itinerary* createItinerary(float startLat, float startLon,
-                                  float targetLat, float targetLon) {
+                                  float targetLat, float targetLon,
+                                  const char* map, const char* style) {
     osmscout::Vehicle vehicle = osmscout::vehicleCar;
 
     osmscout::ObjectFileRef startObject;
@@ -69,7 +67,7 @@ struct Itinerary* createItinerary(float startLat, float startLon,
 
     osmscout::DatabaseParameter databaseParameter;
     osmscout::DatabaseRef       database(new osmscout::Database(databaseParameter));
-    if (!database->Open(map.c_str())) {
+    if (!database->Open(map)) {
         std::cerr << "Cannot open database" << std::endl;
 
         return NULL;
