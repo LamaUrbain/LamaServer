@@ -21,7 +21,7 @@ cd libosmscout
 make full-install
 cd Import
 ./autogen.sh
-./configure
+PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig" ./configure
 make
 cd ../maps
 wget http://download.geofabrik.de/europe/france/picardie-latest.osm.pbf
