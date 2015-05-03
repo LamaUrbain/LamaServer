@@ -14,8 +14,6 @@ export OPAMYES=1
 opam init
 eval `opam config env`
 opam pin add -n macaque https://github.com/ocsigen/macaque.git
-opam pin add -n ocsigenserver https://github.com/ocsigen/ocsigenserver.git#cohttp_rebased
-opam pin add -n eliom https://github.com/ocsigen/eliom.git#cohttp
 opam install batteries eliom safepass oasis dbm mongo cairo2 macaque monomorphic ctypes ctypes-foreign batteries ppx_deriving_yojson
 git clone https://github.com/LamaUrbain/libosmscout
 cd libosmscout
