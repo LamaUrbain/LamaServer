@@ -33,7 +33,7 @@ make
 sed -i 's/MAP/libosmscout\/maps\/picardie-latest/g' ocsigenserver.conf
 sed -i 's/STYLE/libosmscout\/stylesheets\/standard.oss/g' ocsigenserver.conf
 sudo -u postgres psql -f createdb.sql
-make run
+make run &
 sleep 10
 curl http://localhost:8080/users/0 -o check
 check=`cat check`
