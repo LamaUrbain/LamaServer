@@ -20,7 +20,24 @@ opam install batteries eliom safepass oasis dbm mongo cairo2 macaque monomorphic
 git clone https://github.com/LamaUrbain/libosmscout
 cd libosmscout
 make full-install
-cd ..
+cd Import
+./autogen.sh
+./configure
+make
+cd ../maps
+wget http://download.geofabrik.de/europe/france/picardie-latest.osm.pbf
+./build.sh picardie-latest.osm.pbf
+cd ../..
 echo 'true: -traverse' >> _tags
 echo 'true: not_hygienic' >> _tags
 make
+sed -i 's/MAP/libosmscout\/maps\/picardie-latest/g' ocsigenserver.conf
+sed -i 's/STYLE/libosmscout\/stylesheets\/standard.oss/g' ocsigenserver.conf
+make run
+sleep 10
+curl http://localhost:8080/users/0 -o check
+check=`cat check`
+if [[ ! $check =~ "User not found" ]]; then
+    exit 1
+fi
+killall ocsigenserver
