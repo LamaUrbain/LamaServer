@@ -25,7 +25,7 @@ cd Import
 make
 cd ../maps
 wget http://download.geofabrik.de/europe/france/picardie-latest.osm.pbf
-./build.sh picardie-latest.osm.pbf
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib" ./build.sh picardie-latest.osm.pbf
 cd ../..
 echo 'true: -traverse' >> _tags
 echo 'true: not_hygienic' >> _tags
