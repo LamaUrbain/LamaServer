@@ -1,10 +1,8 @@
-CREATE DATABASE lamaurbain;
-CREATE USER lamaurbain PASSWORD 'lamaurbain';
-
-\connect lamaurbain
-
-GRANT ALL PRIVILEGES ON DATABASE lamaurbain TO lamaurbain;
 SET client_encoding = 'UTF8';
+
+CREATE USER lamaurbain PASSWORD 'lamaurbain';
+CREATE DATABASE lamaurbain OWNER lamaurbain ENCODING 'UTF8';
+\connect lamaurbain
 
 CREATE TABLE users_table (
   username text NOT NULL,
@@ -12,7 +10,7 @@ CREATE TABLE users_table (
   email text NOT NULL,
   id integer PRIMARY KEY
 );
-GRANT ALL PRIVILEGES ON users_table TO lamaurbain;
+ALTER TABLE users_table OWNER TO lamaurbain;
 
 CREATE SEQUENCE users_id_seq;
-GRANT ALL PRIVILEGES ON users_id_seq TO lamaurbain;
+ALTER SEQUENCE users_id_seq OWNER TO lamaurbain;
