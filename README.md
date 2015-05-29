@@ -17,23 +17,16 @@ By default the password is 'lamaurbain', if you want to change it, then execute:
  <type your password>
 `
 
-The final part is about to create a file named 'password' filled with the password you just gave,
-and recompile the project with:
+The final part is about creating a file named 'password' filled with the password you just gave.
+Then correct the file db_macaque_wrapper.ml with the address on which the database is located.
 
+After that you can use Docker to build the project's image
 `
- $ make
-`
-
-Then either you can do:
-
-`
- $ make install
+ $ docker build -t lamaserver
 `
 
-and setuping your server or do:
-
+And then run it using this command
 `
- $ make run
+ $ docker run -p 0.0.0.0:8080:8080 -t lamaserver
 `
 
-for testing.
