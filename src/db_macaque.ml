@@ -13,11 +13,10 @@ let users_table =
     id integer NOT NULL DEFAULT(nextval $users_id_seq$)
    ) >>)
 
-let auth_table =
-  (<:table< auth_table (
-    token text NOT NULL DEFAULT,
-    user integer
-  ) <<)
+let auth_table = (<:table< auth_table (
+  token text NOT NULL,
+  id integer NOT NULL
+  ) >>)
 
 let create_user ~username ~password ~email =
   Db.value (<:value< $users_table$?id >>)
