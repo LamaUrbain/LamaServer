@@ -6,7 +6,7 @@ module Lwt_PGOCaml = PGOCaml_generic.Make(Lwt_thread)
 module Lwt_Query = Query.Make_with_Db(Lwt_thread)(Lwt_PGOCaml)
 
 let connect = Lwt_PGOCaml.connect
-    ~host:"127.0.0.1"
+    ~host:"postgres"
     ~database:"lamaurbain"
     ~user:"lamaurbain"
     ~password:"lamaurbain"

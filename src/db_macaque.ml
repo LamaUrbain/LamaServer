@@ -3,6 +3,13 @@ open Eliom_lib.Lwt_ops
 
 module Db = Db_macaque_wrapper
 
+module Calendar = struct
+  include CalendarLib.Calendar
+  module Printer = CalendarLib.Printer.Calendar
+end
+
+let string_of_calendar cal = Calendar.Printer.sprint "%d/%m/%Y à %T" cal
+
 let users_id_seq = (<:sequence< serial "users_id_seq" >>)
 
 let users_table =
@@ -10,12 +17,14 @@ let users_table =
     username text NOT NULL,
     password text NOT NULL,
     email text NOT NULL,
+    created timestamp NOT NULL DEFAULT(localtimestamp ()),
     id integer NOT NULL DEFAULT(nextval $users_id_seq$)
    ) >>)
 
 let auth_table = (<:table< auth_table (
   token text NOT NULL,
-  id integer NOT NULL
+  id integer NOT NULL,
+  created timestamp NOT NULL DEFAULT(localtimestamp ())
   ) >>)
 
 let create_user ~username ~password ~email =
@@ -27,6 +36,7 @@ let create_user ~username ~password ~email =
                  username = $string:username$;
                  password = $string:password$;
                  email = $string:email$;
+                 created = $users_table$?created;
                  id = $int32:id$;
                  } >>
   >>= fun () ->
@@ -35,6 +45,7 @@ let create_user ~username ~password ~email =
         username;
         password;
         email;
+	created = "";
         id = Int32.to_int id;
       })
 
@@ -45,6 +56,7 @@ let to_user =
     username = x#!username;
     password = x#!password;
     email = x#!email;
+    created = string_of_calendar x#!created;
     id = Int32.to_int x#!id;
     }
   in
@@ -57,6 +69,7 @@ let find_user id =
             username = user_.username;
             password = user_.password;
             email = user_.email;
+            created = user_.created;
             id = user_.id;
             } |
             user_ in $users_table$;

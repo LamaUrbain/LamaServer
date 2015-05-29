@@ -18,6 +18,7 @@ let create_user ~username ~password ~email =
         username;
         password;
         email;
+	created = "";
         id=0;
       }
     )
@@ -33,5 +34,6 @@ let find_user id =
       let username = Bson.get_element "username" doc |> Bson.get_string in
       let password = Bson.get_element "password" doc |> Bson.get_string in
       let email = Bson.get_element "email" doc |> Bson.get_string in
+      let created = "" in 
       let open Users in
-      Lwt.return (Some {username; password; email;id;})
+      Lwt.return (Some {username; password; email;id; created})
