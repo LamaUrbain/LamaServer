@@ -27,3 +27,5 @@ RUN eval `opam config env`; make
 
 RUN sed -i 's/MAP/libosmscout\/maps\/picardie-latest/g' ocsigenserver.conf
 RUN sed -i 's/STYLE/libosmscout\/stylesheets\/standard.oss/g' ocsigenserver.conf
+
+CMD eval `opam config env`; make run
