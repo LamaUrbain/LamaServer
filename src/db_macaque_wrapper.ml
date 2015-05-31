@@ -6,10 +6,10 @@ module Lwt_PGOCaml = PGOCaml_generic.Make(Lwt_thread)
 module Lwt_Query = Query.Make_with_Db(Lwt_thread)(Lwt_PGOCaml)
 
 let connect = Lwt_PGOCaml.connect
-    ~host:"postgres"
-    ~database:"lamaurbain"
-    ~user:"lamaurbain"
-    ~password:"lamaurbain"
+    ~host:Config.host
+    ~database:Config.database
+    ~user:Config.user
+    ~password:Config.password
 
 let pool = lazy (Lwt_pool.create 16 ~validate:Lwt_PGOCaml.alive connect)
 
