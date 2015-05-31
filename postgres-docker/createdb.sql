@@ -29,10 +29,9 @@ CREATE TABLE users_table (
 ALTER TABLE users_table OWNER TO lamaurbain;
 
 CREATE TABLE auth_table (
-  token text NOT NULL,
+  token text NOT NULL PRIMARY KEY,
   owner integer NOT NULL,
   created date NOT NULL default CURRENT_DATE,
-  PRIMARY KEY token
 );
 
 CREATE TABLE coord_table (
