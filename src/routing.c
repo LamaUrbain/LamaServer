@@ -9,6 +9,11 @@
 #include <osmscout/util/Geometry.h>
 #include <osmscout/util/Tiling.h>
 
+struct Point {
+    osmscout::ObjectFileRef object;
+    size_t nodeIndex;
+};
+
 struct Itinerary {
     osmscout::WayRef way;
     osmscout::StyleConfigRef styleConfig;
@@ -51,131 +56,112 @@ static void GetCarSpeedTable(std::map<std::string,double>& map)
 
 static const double DPI=96.0;
 
+static osmscout::Vehicle g_vehicle = osmscout::vehicleCar;
+static osmscout::RoutingServiceRef g_router = NULL;
+static osmscout::StyleConfigRef g_styleConfig = NULL;
+static osmscout::FastestPathRoutingProfileRef g_routingProfile = NULL;
+
 extern "C"
-struct Itinerary* createItinerary(float startLat, float startLon,
-                                  float targetLat, float targetLon,
-                                  const char* map, const char* style) {
-    osmscout::Vehicle vehicle = osmscout::vehicleCar;
-
-    osmscout::ObjectFileRef startObject;
-    size_t startNodeIndex;
-
-    osmscout::ObjectFileRef targetObject;
-    size_t targetNodeIndex;
-
+bool init(const char* map, const char* style) {
     bool outputGPX = false;
-
     osmscout::DatabaseParameter databaseParameter;
-    osmscout::DatabaseRef       database(new osmscout::Database(databaseParameter));
+    osmscout::DatabaseRef database(new osmscout::Database(databaseParameter));
+    osmscout::RouterParameter routerParameter;
+    osmscout::RouteDescription description;
+    std::map<std::string, double> carSpeedTable;
+
     if (!database->Open(map)) {
         std::cerr << "Cannot open database" << std::endl;
-
-        return NULL;
+        return false;
     }
 
-    osmscout::FastestPathRoutingProfile routingProfile(database->GetTypeConfig());
-    osmscout::RouterParameter           routerParameter;
+    auto routingProfile = new osmscout::FastestPathRoutingProfile(database->GetTypeConfig());
+    osmscout::TypeConfigRef typeConfig = database->GetTypeConfig();
 
     if (!outputGPX) {
         routerParameter.SetDebugPerformance(true);
     }
 
-    osmscout::RoutingServiceRef router(new osmscout::RoutingService(database,
-                                                                    routerParameter,
-                                                                    vehicle));
+    auto router = new osmscout::RoutingService(database, routerParameter, g_vehicle);
 
     if (!router->Open()) {
         std::cerr << "Cannot open routing database" << std::endl;
-
-        return NULL;
+        return false;
     }
 
-    osmscout::TypeConfigRef             typeConfig=database->GetTypeConfig();
-    osmscout::RouteData                 data;
-    osmscout::RouteDescription          description;
-    std::map<std::string,double>        carSpeedTable;
-
-    switch (vehicle) {
+    switch (g_vehicle) {
     case osmscout::vehicleFoot:
-        routingProfile.ParametrizeForFoot(*typeConfig, 5.0);
+        routingProfile->ParametrizeForFoot(*typeConfig, 5.0);
         break;
     case osmscout::vehicleBicycle:
-        routingProfile.ParametrizeForBicycle(*typeConfig, 20.0);
+        routingProfile->ParametrizeForBicycle(*typeConfig, 20.0);
         break;
     case osmscout::vehicleCar:
         GetCarSpeedTable(carSpeedTable);
-        routingProfile.ParametrizeForCar(*typeConfig, carSpeedTable, 160.0);
+        routingProfile->ParametrizeForCar(*typeConfig, carSpeedTable, 160.0);
         break;
-    }
-
-    if (!router->GetClosestRoutableNode(startLat,
-                                        startLon,
-                                        vehicle,
-                                        1000,
-                                        startObject,
-                                        startNodeIndex)) {
-        std::cerr << "Error while searching for routing node near start location!" << std::endl;
-        return NULL;
-    }
-
-    if (startObject.Invalid() || startObject.GetType()==osmscout::refNode) {
-        std::cerr << "Cannot find start node for start location!" << std::endl;
-    }
-
-    if (!router->GetClosestRoutableNode(targetLat,
-                                        targetLon,
-                                        vehicle,
-                                        1000,
-                                        targetObject,
-                                        targetNodeIndex)) {
-        std::cerr << "Error while searching for routing node near target location!" << std::endl;
-        return NULL;
-    }
-
-    if (targetObject.Invalid() || targetObject.GetType()==osmscout::refNode) {
-        std::cerr << "Cannot find start node for target location!" << std::endl;
-    }
-
-    if (!router->CalculateRoute(routingProfile,
-                                startObject,
-                                startNodeIndex,
-                                targetObject,
-                                targetNodeIndex,
-                                data)) {
-        std::cerr << "There was an error while calculating the route!" << std::endl;
-        router->Close();
-        return NULL;
-    }
-
-    if (data.IsEmpty()) {
-        std::cout << "No Route found!" << std::endl;
-
-        router->Close();
-
-        return NULL;
-    }
-
-    auto way = new osmscout::Way;
-
-    if (!router->TransformRouteDataToWay(data, *way)) {
-        std::cerr << "Cannot transform route date to way" << std::endl;
-
-        return NULL;
     }
 
     auto styleConfig = new osmscout::StyleConfig(database->GetTypeConfig());
 
     if (!styleConfig->Load(style)) {
         std::cerr << "Cannot open style" << std::endl;
+        return false;
+    }
 
+    g_styleConfig = osmscout::StyleConfigRef(styleConfig);
+    g_router = osmscout::RoutingServiceRef(router);
+    g_routingProfile = osmscout::FastestPathRoutingProfileRef(routingProfile);
+    return true;
+}
+// router->Close();
+
+extern "C"
+struct Point* createPoint(float lat, float lon) {
+    osmscout::ObjectFileRef object;
+    size_t nodeIndex;
+    auto result = new Point;
+
+    if (!g_router->GetClosestRoutableNode(lat, lon, g_vehicle, 1000, object, nodeIndex)) {
+        std::cerr << "Error while searching for routing node near location !" << std::endl;
         return NULL;
     }
 
+    if (object.Invalid() || object.GetType() == osmscout::refNode) {
+        std::cerr << "Cannot find start node for location !" << std::endl;
+        return NULL;
+    }
+
+    result->object = object;
+    result->nodeIndex = nodeIndex;
+    return result;
+}
+
+extern "C"
+struct Itinerary* createItinerary(float startLat, float startLon,
+                                  float targetLat, float targetLon) {
+    struct Point* start = createPoint(startLat, startLon);
+    struct Point* target = createPoint(targetLat, targetLon);
+    auto way = new osmscout::Way;
     auto result = new Itinerary;
+    osmscout::RouteData data;
+
+    if (!g_router->CalculateRoute(*g_routingProfile, start->object, start->nodeIndex, target->object, target->nodeIndex, data)) {
+        std::cerr << "There was an error while calculating the route!" << std::endl;
+        return NULL;
+    }
+
+    if (data.IsEmpty()) {
+        std::cout << "No Route found!" << std::endl;
+        return NULL;
+    }
+
+    if (!g_router->TransformRouteDataToWay(data, *way)) {
+        std::cerr << "Cannot transform route date to way" << std::endl;
+        return NULL;
+    }
 
     result->way = osmscout::WayRef(way);
-    result->styleConfig = osmscout::StyleConfigRef(styleConfig);
-
     return result;
 }
 
@@ -211,7 +197,7 @@ bool paint(size_t x, size_t y,
     osmscout::TileProjection projection;
     osmscout::MapParameter drawParameter;
     osmscout::AreaSearchParameter searchParameter;
-    Painter painter(itinerary->styleConfig);
+    Painter painter(g_styleConfig);
 
     osmscout::MapData data;
 

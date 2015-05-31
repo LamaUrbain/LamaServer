@@ -39,7 +39,8 @@ module Cpp : sig
   type magnification
   type itinerary
 
-  val create : float -> float -> float -> float -> string -> string -> itinerary
+  val init : string -> string -> bool
+  val create : float -> float -> float -> float -> itinerary
   val get_magnification : Unsigned.UInt32.t -> magnification
   val iter_coordinates : itinerary -> magnification -> (Unsigned.Size_t.t -> Unsigned.Size_t.t -> unit) -> unit
   val paint : x:int -> y:int -> width:int -> height:int -> itinerary:itinerary -> magnification:magnification -> context:Cairo.context -> bool
@@ -50,8 +51,11 @@ end = struct
   type magnification = unit ptr
   type itinerary = unit ptr
 
+  let init =
+    foreign "init" (string @-> string @-> returning bool)
+
   let create =
-    foreign "createItinerary" (float @-> float @-> float @-> float @-> string @-> string @-> returning (ptr void))
+    foreign "createItinerary" (float @-> float @-> float @-> float @-> returning (ptr void))
 
   let get_magnification =
     foreign "getMagnification" (uint32_t @-> returning (ptr void))
@@ -79,8 +83,12 @@ module Cache = Ocsigen_cache.Make(struct
 
 let cache = new Cache.cache (assert false) 500
 *)
+let lol_cache : (int, Cpp.itinerary) Hashtbl.t = Hashtbl.create 16
 
-let lol_cache = Hashtbl.create 16
+let () =
+  let map = Config.map and style = Config.style in
+  if not (Cpp.init map style) then
+    failwith "DB init failed"
 
 let parse_coord x =
   let open Request_data in
@@ -102,8 +110,7 @@ let create coords =
         (parse_coord start_coord, parse_coord target_coord)
     | _ -> failwith "LOL"
   in
-  let map = Config.map and style = Config.style in
-  let res = Cpp.create startLat startLon targetLat targetLon map style in
+  let res = Cpp.create startLat startLon targetLat targetLon in
   let id = Hashtbl.length lol_cache in
   Hashtbl.add lol_cache id res;
   id
