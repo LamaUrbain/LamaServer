@@ -6,7 +6,7 @@ How to setup the database and build the project
 To init the database, just execute:
 
 `
- $ sudo -u postgres psql -f createdb.sql
+ $ sudo -u postgres psql -f postgres-docker/createdb.sql
 `
 
 By default the password is 'lamaurbain', if you want to change it, then execute:
