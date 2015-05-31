@@ -9,3 +9,6 @@ PKG cairo2
 PKG ctypes.foreign
 PKG monomorphic
 PKG yojson
+PKG ppx_deriving_yojson
+PKG mongo
+PKG macaque
