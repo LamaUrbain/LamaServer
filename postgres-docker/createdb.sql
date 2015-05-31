@@ -33,7 +33,7 @@ ALTER TABLE users_table OWNER TO lamaurbain;
 CREATE TABLE auth_table (
   token text NOT NULL PRIMARY KEY,
   owner integer NOT NULL,
-  created date NOT NULL DEFAULT CURRENT_DATE,
+  created date NOT NULL DEFAULT CURRENT_DATE
 );
 ALTER TABLE auth_table OWNER TO lamaurbain;
 
