@@ -169,11 +169,14 @@ let create {Request_data.name; departure; destination; favorite} =
         []
   in
   let id = Hashtbl.length itineraries_cache in
+  let creation =
+    CalendarLib.Printer.Calendar.sprint "%iT%TZ" (CalendarLib.Calendar.now ())
+  in
   let res =
     { Result_data.id
     ; owner = None (* TODO *)
     ; name
-    ; creation = "lol" (* TODO *)
+    ; creation
     ; favorite
     ; departure
     ; destinations
