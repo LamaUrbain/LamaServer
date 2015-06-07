@@ -108,6 +108,19 @@ let () =
             (Request_data.itinerary_creation_of_yojson (Yojson.Safe.from_string post))
         in
         wrap_body_json (fun () -> aux) () post
+    | [id; "destinations"] ->
+        let aux post =
+          wrap_errors
+            (fun destination ->
+               let id = int_of_string id in
+               let itinerary = Itinerary.add_destination destination id in
+               send_json
+                 ~code:200
+                 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
+            )
+            (Request_data.add_destination_of_yojson (Yojson.Safe.from_string post))
+        in
+        wrap_body_json (fun () -> aux) () post
     | _ ->
         Eliom_registration.String.send ~code:404 ("", "")
   in

@@ -22,3 +22,8 @@ type itinerary_edition =
   ; departure : coord option
   ; favorite : bool option
   } [@@deriving yojson]
+
+type add_destination =
+  { destination : coord
+  ; position : int option
+  } [@@deriving yojson]

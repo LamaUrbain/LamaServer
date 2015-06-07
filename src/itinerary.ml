@@ -258,3 +258,12 @@ let edit {Request_data.name; departure; favorite} id =
   in
   Hashtbl.replace itineraries_cache id itinerary;
   itinerary
+
+let add_destination {Request_data.destination; position} id =
+  let itinerary = Hashtbl.find itineraries_cache id in
+  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  let destinations = match position with
+    | Some position -> Utils.list_insert position destination itinerary.Result_data.destinations
+    | None -> itinerary.Result_data.destinations @ [destination]
+  in
+  {itinerary with Result_data.destinations}
