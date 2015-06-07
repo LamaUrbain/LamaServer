@@ -36,6 +36,7 @@ end = struct
 end
 
 module Cpp : sig
+  type map_data
   type point
   type magnification
   type itinerary
@@ -45,11 +46,14 @@ module Cpp : sig
   val create : float -> float -> float -> float -> itinerary
   val get_magnification : Unsigned.UInt32.t -> magnification
   val iter_coordinates : itinerary -> magnification -> (Unsigned.Size_t.t -> Unsigned.Size_t.t -> unit) -> unit
-  val paint : x:int -> y:int -> width:int -> height:int -> itinerary:itinerary -> magnification:magnification -> context:Cairo.context -> bool
+  val create_map_data : unit -> map_data
+  val add_map_data : map_data -> itinerary -> unit
+  val paint : x:int -> y:int -> width:int -> height:int -> map_data:map_data -> magnification:magnification -> context:Cairo.context -> bool
 end = struct
   open Ctypes
   open Foreign
 
+  type map_data = unit ptr
   type point = unit ptr
   type magnification = unit ptr
   type itinerary = unit ptr
@@ -69,16 +73,22 @@ end = struct
   let iter_coordinates =
     foreign "iterCoordinates" (ptr void @-> ptr void @-> funptr (size_t @-> size_t @-> returning void) @-> returning void)
 
+  let create_map_data =
+    foreign "createMapData" (void @-> returning (ptr void))
+
+  let add_map_data =
+    foreign "addMapData" (ptr void @-> ptr void @-> returning void)
+
   let paint =
     foreign "paint" (size_t @-> size_t @-> size_t @-> size_t @-> ptr void @-> ptr void @-> Cairo_bind.t @-> returning bool)
 
-  let paint ~x ~y ~width ~height ~itinerary ~magnification ~context =
+  let paint ~x ~y ~width ~height ~map_data ~magnification ~context =
     let context = Cairo_bind.create context in
     let x = Unsigned.Size_t.of_int x in
     let y = Unsigned.Size_t.of_int y in
     let width = Unsigned.Size_t.of_int width in
     let height = Unsigned.Size_t.of_int height in
-    paint x y width height itinerary magnification context
+    paint x y width height map_data magnification context
 end
 
 module PointCache = Hashtbl.Make(struct
@@ -168,7 +178,10 @@ let create {Request_data.name; departure; destination; favorite} =
   Hashtbl.add itineraries_cache id res;
   res
 
-let waypoints_iter f l = assert false
+let rec waypoints_iter f = function
+  | [] -> ()
+  | [_] -> ()
+  | x::((y::_) as xs) -> f (x, y); waypoints_iter f xs
 
 let get_coordinates ~zoom id =
   let magnification = Cpp.get_magnification (Unsigned.UInt32.of_int zoom) in
@@ -185,22 +198,22 @@ let get_coordinates ~zoom id =
   let to_int = Unsigned.Size_t.to_int in
   Hashtbl.fold (fun (x, y) () acc -> {x = to_int x; y = to_int y} :: acc) set []
 
-(* TODO *)
-let hd = function
-  | [x] -> x
-  | _ -> assert false
-
 let get_image ~x ~y ~z id =
   let itinerary = Hashtbl.find itineraries_cache id in
   let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
-  (* TODO *)
-  let itinerary = ItineraryCache.find itinerary_cache (itinerary.Result_data.departure, hd itinerary.Result_data.destinations) in
+  let map_data = Cpp.create_map_data () in
+  waypoints_iter
+    (fun path ->
+       let itinerary = ItineraryCache.find itinerary_cache path in
+       Cpp.add_map_data map_data itinerary;
+    )
+    (itinerary.Result_data.departure :: itinerary.Result_data.destinations);
   let width = 256 in
   let height = 256 in
   let surface = Cairo.Image.create Cairo.Image.ARGB32 ~width ~height in
   let context = Cairo.create surface in
   let magnification = Cpp.get_magnification (Unsigned.UInt32.of_int z) in
-  if Cpp.paint x y width height itinerary magnification context then
+  if Cpp.paint x y width height map_data magnification context then
     let buf = Buffer.create 500_000 in
     Cairo.PNG.write_to_stream surface ~output:(Buffer.add_string buf);
     Buffer.contents buf

@@ -16,7 +16,6 @@ struct Point {
 
 struct Itinerary {
     osmscout::WayRef way;
-    osmscout::StyleConfigRef styleConfig;
 };
 
 class Painter : public osmscout::MapPainterCairo {
@@ -189,24 +188,29 @@ void iterCoordinates(const Itinerary* itinerary,
 }
 
 extern "C"
+osmscout::MapData* createMapData() {
+    return new osmscout::MapData;
+}
+
+extern "C"
+void addMapData(osmscout::MapData* data, const Itinerary* itinerary) {
+    data->poiWays.push_back(itinerary->way);
+}
+
+extern "C"
 bool paint(size_t x, size_t y,
            size_t width, size_t height,
-           const Itinerary* itinerary,
+           const osmscout::MapData* data,
            const osmscout::Magnification* magnification,
            cairo_t* cairo) {
     osmscout::TileProjection projection;
     osmscout::MapParameter drawParameter;
-    osmscout::AreaSearchParameter searchParameter;
     Painter painter(g_styleConfig);
 
-    osmscout::MapData data;
-
     drawParameter.SetFontSize(3.0);
-    data.poiWays.push_back(itinerary->way);
-
     projection.Set(x, y, *magnification, DPI, width, height);
 
-    return painter.DrawMap(projection, drawParameter, data, cairo);
+    return painter.DrawMap(projection, drawParameter, *data, cairo);
 }
 
 
