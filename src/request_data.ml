@@ -14,5 +14,11 @@ type itinerary_creation =
   { name : string option
   ; departure : coord
   ; destination : coord option
-  ; favorite : bool
+  ; favorite : bool option
+  } [@@deriving yojson]
+
+type itinerary_edition =
+  { name : string option
+  ; departure : coord option
+  ; favorite : bool option
   } [@@deriving yojson]

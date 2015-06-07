@@ -111,6 +111,27 @@ let () =
     | _ ->
         Eliom_registration.String.send ~code:404 ("", "")
   in
+  let put_handler get put =
+    match get with
+    | [id] ->
+        let aux put =
+          wrap_errors
+            (fun put ->
+               let id = int_of_string id in
+               let itinerary = Itinerary.edit put id in
+               send_json
+                 ~code:200
+                 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
+            )
+            (Request_data.itinerary_edition_of_yojson (Yojson.Safe.from_string put))
+        in
+        wrap_body_json (fun () -> aux) () put
+    | _ ->
+        Eliom_registration.String.send ~code:404 ("", "")
+  in
+  let delete_handler get delete =
+    Eliom_registration.String.send ~code:404 ("", "")
+  in
   let get_handler get () =
     match get with
     | [id; "coordinates"; zoom] ->
@@ -134,6 +155,20 @@ let () =
     | _ ->
         Eliom_registration.String.send ~code:404 ("", "")
   in
+  let service =
+    Eliom_service.Http.put_service
+      ~path:["itineraries"]
+      ~get_params:(suffix (all_suffix "params"))
+      ()
+  in
+  Eliom_registration.Any.register ~service put_handler;
+  let service =
+    Eliom_service.Http.delete_service
+      ~path:["itineraries"]
+      ~get_params:(suffix (all_suffix "params"))
+      ()
+  in
+  Eliom_registration.Any.register ~service delete_handler;
   let service =
     Eliom_service.Http.service
       ~path:["itineraries"]

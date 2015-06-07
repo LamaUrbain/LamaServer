@@ -139,26 +139,33 @@ let () =
     failwith "DB init failed"
 
 let create_point coord =
-  let point =
-    Cpp.create_point coord.Request_data.latitude coord.Request_data.longitude
-  in
-  PointCache.add points_cache coord point;
-  point
+  match PointCache.find points_cache coord with
+  | point ->
+      point
+  | exception Not_found ->
+      let point =
+        Cpp.create_point coord.Request_data.latitude coord.Request_data.longitude
+      in
+      PointCache.add points_cache coord point;
+      point
 
-let create_itinerary (departure, departure_point) (destination, destination_point) =
-  let itinerary =
-    Cpp.create
-      departure.Request_data.latitude departure.Request_data.longitude
-      destination.Request_data.latitude destination.Request_data.longitude
-  in
-  ItineraryCache.add itinerary_cache (departure, destination) itinerary
+let cache_itinerary (departure, departure_point) (destination, destination_point) =
+  let path = (departure, destination) in
+  if not (ItineraryCache.mem itinerary_cache path) then begin
+    let itinerary =
+      Cpp.create
+        departure.Request_data.latitude departure.Request_data.longitude
+        destination.Request_data.latitude destination.Request_data.longitude
+    in
+    ItineraryCache.add itinerary_cache path itinerary;
+  end
 
 let create {Request_data.name; departure; destination; favorite} =
   let departure_point = create_point departure in
   let destinations = match destination with
     | Some destination ->
         let destination_point = create_point destination in
-        create_itinerary
+        cache_itinerary
           (departure, departure_point)
           (destination, destination_point);
         [destination]
@@ -169,8 +176,9 @@ let create {Request_data.name; departure; destination; favorite} =
   let res =
     { Result_data.id
     ; owner = None (* TODO *)
+    ; name
     ; creation = "lol" (* TODO *)
-    ; favorite = false (* TODO *)
+    ; favorite
     ; departure
     ; destinations
     }
@@ -223,4 +231,34 @@ let get_image ~x ~y ~z id =
 let get id =
   let itinerary = Hashtbl.find itineraries_cache id in
   let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  itinerary
+
+let edit {Request_data.name; departure; favorite} id =
+  let itinerary = Hashtbl.find itineraries_cache id in
+  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  let itinerary = match name with
+    | None -> itinerary
+    | Some name -> {itinerary with Result_data.name = Some name} (* TODO *)
+  in
+  let itinerary = match departure with
+    | None ->
+        itinerary
+    | Some departure ->
+        let departure_point = create_point departure in
+        begin match itinerary.Result_data.destinations with
+        | [] ->
+            ()
+        | destination::_ ->
+            let destination_point = create_point destination in
+            cache_itinerary
+              (departure, departure_point)
+              (destination, destination_point);
+        end;
+        {itinerary with Result_data.departure}
+  in
+  let itinerary = match favorite with
+    | None -> itinerary
+    | Some favorite -> {itinerary with Result_data.favorite = Some favorite} (* TODO *)
+  in
+  Hashtbl.replace itineraries_cache id itinerary;
   itinerary
