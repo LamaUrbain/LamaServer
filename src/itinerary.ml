@@ -36,10 +36,12 @@ end = struct
 end
 
 module Cpp : sig
+  type point
   type magnification
   type itinerary
 
   val init : string -> string -> bool
+  val create_point : float -> float -> point
   val create : float -> float -> float -> float -> itinerary
   val get_magnification : Unsigned.UInt32.t -> magnification
   val iter_coordinates : itinerary -> magnification -> (Unsigned.Size_t.t -> Unsigned.Size_t.t -> unit) -> unit
@@ -48,11 +50,15 @@ end = struct
   open Ctypes
   open Foreign
 
+  type point = unit ptr
   type magnification = unit ptr
   type itinerary = unit ptr
 
   let init =
     foreign "init" (string @-> string @-> returning bool)
+
+  let create_point =
+    foreign "createPoint" (float @-> float @-> returning (ptr void))
 
   let create =
     foreign "createItinerary" (float @-> float @-> float @-> float @-> returning (ptr void))
@@ -75,6 +81,17 @@ end = struct
     paint x y width height itinerary magnification context
 end
 
+module PointCache = Hashtbl.Make(struct
+    type t = Request_data.coord
+
+    let equal x y =
+      Float.equal x.Request_data.latitude y.Request_data.latitude
+      && Float.equal x.Request_data.longitude y.Request_data.longitude
+
+    let hash x =
+      Hashtbl.hash (x.Request_data.latitude, x.Request_data.longitude)
+  end)
+
 (*
 module Cache = Ocsigen_cache.Make(struct
     type key = (float * float)
@@ -83,51 +100,101 @@ module Cache = Ocsigen_cache.Make(struct
 
 let cache = new Cache.cache (assert false) 500
 *)
-let lol_cache : (int, Cpp.itinerary) Hashtbl.t = Hashtbl.create 16
+let points_cache : Cpp.point PointCache.t =
+  PointCache.create 16
+
+module ItineraryCache = Hashtbl.Make(struct
+    type t = (Request_data.coord * Request_data.coord)
+
+    let equal x y =
+      let aux x y =
+        Float.equal x.Request_data.latitude y.Request_data.latitude
+        && Float.equal x.Request_data.longitude y.Request_data.longitude
+      in
+      aux (fst x) (fst y) && aux (snd x) (snd y)
+
+    let hash (x, y) =
+      Hashtbl.hash Request_data.(x.latitude, x.longitude, y.latitude, y.longitude)
+  end)
+
+let itinerary_cache : Cpp.itinerary ItineraryCache.t =
+  ItineraryCache.create 16
+
+let itineraries_cache : (int, Result_data.itinerary) Hashtbl.t =
+  Hashtbl.create 16
 
 let () =
   let map = Config.map and style = Config.style in
   if not (Cpp.init map style) then
     failwith "DB init failed"
 
-let parse_coord x =
-  let open Request_data in
-  match x with
-  | {typ = "address"; content = `String address} ->
-      (* `Address address *)
-      assert false
-  | {typ = "coord"; content = `Assoc [("latitude", `Float lat); ("longitude", `Float lon)]}
-  | {typ = "coord"; content = `Assoc [("longitude", `Float lon); ("latitude", `Float lat)]} ->
-      `Coord (lat, lon)
-  | _ ->
-      failwith "Parse failed"
-
-let create coords =
-  let (`Coord (startLat, startLon), `Coord (targetLat, targetLon)) =
-    let open Request_data in
-    match coords with
-    | {points = [start_coord; target_coord]} ->
-        (parse_coord start_coord, parse_coord target_coord)
-    | _ -> failwith "LOL"
+let create_point coord =
+  let point =
+    Cpp.create_point coord.Request_data.latitude coord.Request_data.longitude
   in
-  let res = Cpp.create startLat startLon targetLat targetLon in
-  let id = Hashtbl.length lol_cache in
-  Hashtbl.add lol_cache id res;
-  id
+  PointCache.add points_cache coord point;
+  point
+
+let create_itinerary (departure, departure_point) (destination, destination_point) =
+  let itinerary =
+    Cpp.create
+      departure.Request_data.latitude departure.Request_data.longitude
+      destination.Request_data.latitude destination.Request_data.longitude
+  in
+  ItineraryCache.add itinerary_cache (departure, destination) itinerary
+
+let create {Request_data.name; departure; destination; favorite} =
+  let departure_point = create_point departure in
+  let destinations = match destination with
+    | Some destination ->
+        let destination_point = create_point destination in
+        create_itinerary
+          (departure, departure_point)
+          (destination, destination_point);
+        [destination]
+    | None ->
+        []
+  in
+  let id = Hashtbl.length itineraries_cache in
+  let res =
+    { Result_data.id
+    ; owner = None (* TODO *)
+    ; creation = "lol" (* TODO *)
+    ; favorite = false (* TODO *)
+    ; departure
+    ; destinations
+    }
+  in
+  Hashtbl.add itineraries_cache id res;
+  res
+
+let waypoints_iter f l = assert false
 
 let get_coordinates ~zoom id =
   let magnification = Cpp.get_magnification (Unsigned.UInt32.of_int zoom) in
-  let itinerary = Hashtbl.find lol_cache id in
+  let itinerary = Hashtbl.find itineraries_cache id in
   let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
   let set = Hashtbl.create 512 in
-  let aux x y = Hashtbl.replace set (x, y) () in
-  Cpp.iter_coordinates itinerary magnification aux;
+  waypoints_iter
+    (fun path ->
+       let itinerary = ItineraryCache.find itinerary_cache path in
+       let aux x y = Hashtbl.replace set (x, y) () in
+       Cpp.iter_coordinates itinerary magnification aux;
+    )
+    (itinerary.Result_data.departure :: itinerary.Result_data.destinations);
   let to_int = Unsigned.Size_t.to_int in
   Hashtbl.fold (fun (x, y) () acc -> {x = to_int x; y = to_int y} :: acc) set []
 
+(* TODO *)
+let hd = function
+  | [x] -> x
+  | _ -> assert false
+
 let get_image ~x ~y ~z id =
-  let itinerary = Hashtbl.find lol_cache id in
+  let itinerary = Hashtbl.find itineraries_cache id in
   let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  (* TODO *)
+  let itinerary = ItineraryCache.find itinerary_cache (itinerary.Result_data.departure, hd itinerary.Result_data.destinations) in
   let width = 256 in
   let height = 256 in
   let surface = Cairo.Image.create Cairo.Image.ARGB32 ~width ~height in

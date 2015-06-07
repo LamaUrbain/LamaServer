@@ -5,13 +5,14 @@ type user_creation =
   } [@@deriving yojson]
 
 type coord =
-  { typ [@key "type"] : string
-  ; content : Yojson.Safe.json
+  { address : string option
+  ; latitude : float
+  ; longitude : float
   } [@@deriving yojson]
 
 type itinerary_creation =
-  { points : coord list
-(*  ; settings : settings *)
+  { name : string option
+  ; departure : coord
+  ; destination : coord option
+  ; favorite : bool
   } [@@deriving yojson]
-
-type id = { id : int } [@@deriving yojson]

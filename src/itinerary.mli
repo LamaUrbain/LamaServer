@@ -9,7 +9,7 @@ module Zoomlevel : sig
   val create : int -> t
 end
 
-val create : Request_data.itinerary_creation -> t
+val create : Request_data.itinerary_creation -> Result_data.itinerary
 
 val get_coordinates : zoom:Zoomlevel.t -> t -> coordinate_list
 

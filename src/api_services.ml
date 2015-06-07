@@ -98,13 +98,14 @@ let () =
     match get with
     | [] ->
         let aux post =
-          let open Request_data in
           wrap_errors
             (fun coords ->
-               let id = Itinerary.create coords in
-               send_json ~code:200 (Yojson.Safe.to_string (id_to_yojson {id}))
+               let itinerary = Itinerary.create coords in
+               send_json
+                 ~code:200
+                 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
             )
-            (itinerary_creation_of_yojson (Yojson.Safe.from_string post))
+            (Request_data.itinerary_creation_of_yojson (Yojson.Safe.from_string post))
         in
         wrap_body_json (fun () -> aux) () post
     | _ ->
