@@ -127,6 +127,10 @@ let () =
         let z = Itinerary.Zoomlevel.create z in
         let image = Itinerary.get_image ~x ~y ~z id in
         Eliom_registration.String.send (image, "image/png")
+    | [id] ->
+        let id = int_of_string id in
+        let itinerary = Itinerary.get id in
+        send_json ~code:200 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
     | _ ->
         Eliom_registration.String.send ~code:404 ("", "")
   in

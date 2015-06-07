@@ -219,3 +219,8 @@ let get_image ~x ~y ~z id =
     Buffer.contents buf
   else
     failwith "lol"
+
+let get id =
+  let itinerary = Hashtbl.find itineraries_cache id in
+  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  itinerary

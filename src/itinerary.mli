@@ -14,3 +14,5 @@ val create : Request_data.itinerary_creation -> Result_data.itinerary
 val get_coordinates : zoom:Zoomlevel.t -> t -> coordinate_list
 
 val get_image : x:int -> y:int -> z:Zoomlevel.t -> t -> string
+
+val get : t -> Result_data.itinerary
