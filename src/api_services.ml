@@ -118,7 +118,7 @@ let () =
                  ~code:200
                  (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
             )
-            (Request_data.add_destination_of_yojson (Yojson.Safe.from_string post))
+            (Request_data.destination_addition_of_yojson (Yojson.Safe.from_string post))
         in
         wrap_body_json (fun () -> aux) () post
     | _ ->
@@ -139,11 +139,34 @@ let () =
             (Request_data.itinerary_edition_of_yojson (Yojson.Safe.from_string put))
         in
         wrap_body_json (fun () -> aux) () put
+    | [id; "destinations"; initial_position] ->
+        let aux put =
+          wrap_errors
+            (fun put ->
+               let id = int_of_string id in
+               let initial_position = int_of_string initial_position in
+               let itinerary = Itinerary.edit_destination put ~initial_position id in
+               send_json
+                 ~code:200
+                 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
+            )
+            (Request_data.Destination_edition.of_yojson (Yojson.Safe.from_string put))
+        in
+        wrap_body_json (fun () -> aux) () put
     | _ ->
         Eliom_registration.String.send ~code:404 ("", "")
   in
   let delete_handler get delete =
-    Eliom_registration.String.send ~code:404 ("", "")
+    match get with
+    | ["itineraries"; id; "destinations"; position] ->
+        let id = int_of_string id in
+        let position = int_of_string position in
+        let itinerary = Itinerary.delete_destination ~position id in
+        send_json
+          ~code:200
+          (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
+    | _ ->
+        Eliom_registration.String.send ~code:404 ("", "")
   in
   let get_handler get () =
     match get with

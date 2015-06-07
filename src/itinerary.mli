@@ -19,4 +19,8 @@ val get : t -> Result_data.itinerary
 
 val edit : Request_data.itinerary_edition -> t -> Result_data.itinerary
 
-val add_destination : Request_data.add_destination -> t -> Result_data.itinerary
+val add_destination : Request_data.destination_addition -> t -> Result_data.itinerary
+
+val edit_destination : Request_data.Destination_edition.t -> initial_position:int -> t -> Result_data.itinerary
+
+val delete_destination : position:int -> t -> Result_data.itinerary

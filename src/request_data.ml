@@ -23,7 +23,14 @@ type itinerary_edition =
   ; favorite : bool option
   } [@@deriving yojson]
 
-type add_destination =
+type destination_addition =
   { destination : coord
   ; position : int option
   } [@@deriving yojson]
+
+module Destination_edition = struct
+  type t =
+    { destination : coord option
+    ; position : int option
+    } [@@deriving yojson]
+end

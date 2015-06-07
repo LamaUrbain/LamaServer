@@ -190,6 +190,15 @@ let rec waypoints_iter f = function
   | [_] -> ()
   | x::((y::_) as xs) -> f (x, y); waypoints_iter f xs
 
+let recache_itineraries itinerary =
+  waypoints_iter
+    (fun (x, y) ->
+       let point_x = create_point x in
+       let point_y = create_point y in
+       cache_itinerary (x, point_x) (y, point_y)
+    )
+    (itinerary.Result_data.departure :: itinerary.Result_data.destinations)
+
 let get_coordinates ~zoom id =
   let magnification = Cpp.get_magnification (Unsigned.UInt32.of_int zoom) in
   let itinerary = Hashtbl.find itineraries_cache id in
@@ -269,4 +278,37 @@ let add_destination {Request_data.destination; position} id =
     | Some position -> Utils.list_insert position destination itinerary.Result_data.destinations
     | None -> itinerary.Result_data.destinations @ [destination]
   in
-  {itinerary with Result_data.destinations}
+  let itinerary = {itinerary with Result_data.destinations} in
+  recache_itineraries itinerary;
+  Hashtbl.replace itineraries_cache id itinerary;
+  itinerary
+
+let edit_destination {Request_data.Destination_edition.destination; position} ~initial_position id =
+  let itinerary = Hashtbl.find itineraries_cache id in
+  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  let destinations = match position with
+    | Some position ->
+        begin match destination with
+        | Some destination ->
+            let destinations = List.remove_at initial_position itinerary.Result_data.destinations in
+            Utils.list_insert position destination destinations
+        | None ->
+            let (destination, destinations) = Utils.list_take_at initial_position itinerary.Result_data.destinations in
+            Utils.list_insert position destination destinations
+        end
+    | None ->
+        List.modify_at initial_position (fun x -> Option.default x destination) itinerary.Result_data.destinations
+  in
+  let itinerary = {itinerary with Result_data.destinations} in
+  recache_itineraries itinerary;
+  Hashtbl.replace itineraries_cache id itinerary;
+  itinerary
+
+let delete_destination ~position id =
+  let itinerary = Hashtbl.find itineraries_cache id in
+  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  let destinations = List.remove_at position itinerary.Result_data.destinations in
+  let itinerary = {itinerary with Result_data.destinations} in
+  recache_itineraries itinerary;
+  Hashtbl.replace itineraries_cache id itinerary;
+  itinerary
