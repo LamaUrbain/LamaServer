@@ -21,6 +21,7 @@ Library "LamaUrbain"
     Users,
     Db,
     Request_data,
+    Result_data,
     Db_mongodb,
     Db_macaque,
     Db_macaque_wrapper,
