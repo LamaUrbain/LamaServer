@@ -312,3 +312,6 @@ let delete_destination ~position id =
   recache_itineraries itinerary;
   Hashtbl.replace itineraries_cache id itinerary;
   itinerary
+
+let delete id =
+  Hashtbl.remove itineraries_cache id
