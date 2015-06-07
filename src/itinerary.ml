@@ -43,7 +43,7 @@ module Cpp : sig
 
   val init : string -> string -> bool
   val create_point : float -> float -> point
-  val create : float -> float -> float -> float -> itinerary
+  val create : point -> point -> itinerary
   val get_magnification : Unsigned.UInt32.t -> magnification
   val iter_coordinates : itinerary -> magnification -> (Unsigned.Size_t.t -> Unsigned.Size_t.t -> unit) -> unit
   val create_map_data : unit -> map_data
@@ -65,7 +65,7 @@ end = struct
     foreign "createPoint" (float @-> float @-> returning (ptr void))
 
   let create =
-    foreign "createItinerary" (float @-> float @-> float @-> float @-> returning (ptr void))
+    foreign "createItinerary" (ptr void @-> ptr void @-> returning (ptr void))
 
   let get_magnification =
     foreign "getMagnification" (uint32_t @-> returning (ptr void))
@@ -152,11 +152,7 @@ let create_point coord =
 let cache_itinerary (departure, departure_point) (destination, destination_point) =
   let path = (departure, destination) in
   if not (ItineraryCache.mem itinerary_cache path) then begin
-    let itinerary =
-      Cpp.create
-        departure.Request_data.latitude departure.Request_data.longitude
-        destination.Request_data.latitude destination.Request_data.longitude
-    in
+    let itinerary = Cpp.create departure_point destination_point in
     ItineraryCache.add itinerary_cache path itinerary;
   end
 

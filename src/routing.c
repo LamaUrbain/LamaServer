@@ -137,10 +137,7 @@ struct Point* createPoint(float lat, float lon) {
 }
 
 extern "C"
-struct Itinerary* createItinerary(float startLat, float startLon,
-                                  float targetLat, float targetLon) {
-    struct Point* start = createPoint(startLat, startLon);
-    struct Point* target = createPoint(targetLat, targetLon);
+struct Itinerary* createItinerary(const struct Point* start, const struct Point* target) {
     auto way = new osmscout::Way;
     auto result = new Itinerary;
     osmscout::RouteData data;
