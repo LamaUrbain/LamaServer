@@ -158,7 +158,7 @@ let () =
   in
   let delete_handler get delete =
     match get with
-    | ["itineraries"; id; "destinations"; position] ->
+    | [id; "destinations"; position] ->
         let id = int_of_string id in
         let position = int_of_string position in
         let itinerary = Itinerary.delete_destination ~position id in
