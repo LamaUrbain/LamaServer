@@ -17,6 +17,13 @@ type itinerary_creation =
   ; favorite : bool option
   } [@@deriving yojson]
 
+type get_all =
+  { search : string option
+  ; owner : string option
+  ; favorite : bool option
+  ; ordering : string option
+  }
+
 type itinerary_edition =
   { name : string option
   ; departure : coord option

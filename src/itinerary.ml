@@ -2,6 +2,7 @@ open Monomorphic
 
 type coordinate = {x : int; y : int} [@@deriving yojson]
 type coordinate_list = coordinate list [@@deriving yojson]
+type itineraries = Result_data.itinerary list [@@deriving yojson]
 
 open BatteriesExceptionless
 
@@ -235,6 +236,55 @@ let get_image ~x ~y ~z id =
     Buffer.contents buf
   else
     failwith "lol"
+
+let get_all {Request_data.search; owner; favorite; ordering} =
+  let itineraries = Hashtbl.fold (fun _ x xs -> x :: xs) itineraries_cache [] in
+  let itineraries = match search with
+    | Some search ->
+        List.filter
+          (fun x -> Option.map_default (String.equal search) true x.Result_data.name)
+          itineraries
+    | None ->
+        itineraries
+  in
+  let itineraries = match owner with
+    | Some owner ->
+        List.filter
+          (fun x -> Option.map_default (String.equal owner) true x.Result_data.owner)
+          itineraries
+    | None ->
+        itineraries
+  in
+  let itineraries = match favorite with
+    | Some favorite ->
+        List.filter
+          (fun x -> Option.map_default (Bool.equal favorite) true x.Result_data.favorite)
+          itineraries
+    | None ->
+        itineraries
+  in
+  let itineraries = match ordering with
+    | Some "name" ->
+        List.sort
+          (fun x y ->
+             Option.map_default
+               (fun x ->
+                  Option.map_default (String.compare x) 1 y.Result_data.name
+               )
+               (-1)
+               x.Result_data.name
+          )
+          itineraries
+    | Some "creation" ->
+        List.sort
+          (fun x y -> String.compare x.Result_data.creation y.Result_data.creation)
+          itineraries
+    | Some _ ->
+        raise Not_found
+    | None ->
+        itineraries
+  in
+  itineraries
 
 let get id =
   let itinerary = Hashtbl.find itineraries_cache id in

@@ -195,6 +195,17 @@ let () =
     | _ ->
         Eliom_registration.String.send ~code:404 ("", "")
   in
+  let get_handler_with_params (search, (owner, (favorite, ordering))) () =
+    let params =
+      { Request_data.search
+      ; owner
+      ; favorite
+      ; ordering
+      }
+    in
+    let itineraries = Itinerary.get_all params in
+    send_json ~code:200 (Yojson.Safe.to_string (Itinerary.itineraries_to_yojson itineraries))
+  in
   let service =
     Eliom_service.Http.put_service
       ~path:["itineraries"]
@@ -222,4 +233,15 @@ let () =
       ~post_params:raw_post_data
       ()
   in
-  Eliom_registration.Any.register ~service post_handler
+  Eliom_registration.Any.register ~service post_handler;
+  let service =
+    Eliom_service.Http.service
+      ~path:["itineraries"]
+      ~get_params:(opt (string "search")
+                   ** opt (string "owner")
+                   ** opt (bool "favorite")
+                   ** opt (string "ordering")
+                  )
+      ()
+  in
+  Eliom_registration.Any.register ~service get_handler_with_params
