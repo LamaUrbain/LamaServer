@@ -236,7 +236,7 @@ let () =
   Eliom_registration.Any.register ~service post_handler;
   let service =
     Eliom_service.Http.service
-      ~path:["itineraries"]
+      ~path:["itineraries"; ""]
       ~get_params:(opt (string "search")
                    ** opt (string "owner")
                    ** opt (bool "favorite")
