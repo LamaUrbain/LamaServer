@@ -27,8 +27,8 @@ let send_json ~code json =
 let send_error ~code error_message =
   send_json ~code error_message
 
-let send_success () =
-  Eliom_registration.String.send ~code:200 ("", "")
+let send_success ?(content_type = "") ?(content = "") () =
+  Eliom_registration.String.send ~code:200 (content_type, content)
 
 let check_content_type ~mime_type content_type =
   match content_type with
@@ -82,7 +82,7 @@ let create_handler =
               ~username:user.username
               ~password:user.password
               ~email:user.email
-            >>= fun _ -> send_success ()
+            >>= fun u -> send_success ~content:(Yojson.Safe.to_string (Users.to_yojson u)) ()
          )
          (user_creation_of_yojson (Yojson.Safe.from_string location_str))
     )
