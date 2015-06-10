@@ -26,14 +26,14 @@ CREATE TABLE users_table (
   password text NOT NULL,
   email dom_mail NOT NULL,
   id integer PRIMARY KEY,
-  created date NOT NULL default CURRENT_DATE
+  created timestamp NOT NULL default CURRENT_timestamp
 );
 ALTER TABLE users_table OWNER TO lamaurbain;
 
 CREATE TABLE auth_table (
   token text NOT NULL PRIMARY KEY,
   owner integer NOT NULL,
-  created date NOT NULL DEFAULT CURRENT_DATE
+  created timestamp NOT NULL DEFAULT CURRENT_timestamp
 );
 ALTER TABLE auth_table OWNER TO lamaurbain;
 
@@ -41,7 +41,7 @@ CREATE TABLE coord_table (
   id integer PRIMARY KEY,
   latitude real NOT NULL,
   longitude real NOT NULL,
-  created date NOT NULL DEFAULT CURRENT_DATE,
+  created timestamp NOT NULL DEFAULT CURRENT_timestamp,
   address text
 );
 ALTER TABLE coord_table OWNER TO lamaurbain;
@@ -52,7 +52,7 @@ CREATE TABLE itinerary_table (
   name dom_name,
   favorite boolean,
   departure int NOT NULL,
-  created date NOT NULL DEFAULT CURRENT_DATE,
+  created timestamp NOT NULL DEFAULT CURRENT_timestamp,
   destinations int[]
 );
 ALTER TABLE itinerary_table OWNER TO lamaurbain;
