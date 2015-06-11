@@ -134,6 +134,13 @@ let itinerary_cache : Cpp.itinerary ItineraryCache.t =
 let itineraries_cache : (int, Result_data.itinerary) Hashtbl.t =
   Hashtbl.create 16
 
+let get_id =
+  let r = ref 0 in
+  fun () ->
+    let v = !r in
+    incr r;
+    v
+
 let () =
   let map = Config.map and style = Config.style in
   if not (Cpp.init map style) then
@@ -169,7 +176,7 @@ let create {Request_data.name; departure; destination; favorite} =
     | None ->
         []
   in
-  let id = Hashtbl.length itineraries_cache in
+  let id = get_id () in
   let creation =
     CalendarLib.Printer.Calendar.sprint "%iT%TZ" (CalendarLib.Calendar.now ())
   in
