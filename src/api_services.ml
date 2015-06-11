@@ -1,4 +1,5 @@
 module D = Db.Db(Db_macaque)
+open Request_data
 
 let (>>=) = Lwt.(>>=)
 
@@ -93,69 +94,75 @@ let _ = Eliom_registration.Any.register create_service create_handler
 
 open Eliom_parameter
 
+let coord_of_param loc =
+   let rex = Pcre.regexp "^([-+]?\\d{1,2}([.]\\d+)?),\\s*([-+]?\\d{1,3}([.]\\d+)?)$" in
+    let latlong = match Pcre.pmatch ~rex loc with
+    | true -> Pcre.split ~rex:(Pcre.regexp ",") loc
+    | false -> assert false in
+    let (lat, long) = float_of_string (List.nth latlong 0), float_of_string (List.nth latlong 1) in
+    {latitude = lat; longitude = long; address = None}
+
+
 let () =
-  let post_handler get post =
-    match get with
-    | [] ->
-        let aux post =
-          wrap_errors
-            (fun coords ->
-               let itinerary = Itinerary.create coords in
-               send_json
-                 ~code:200
-                 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
-            )
-            (Request_data.itinerary_creation_of_yojson (Yojson.Safe.from_string post))
-        in
-        wrap_body_json (fun () -> aux) () post
-    | [id; "destinations"] ->
-        let aux post =
-          wrap_errors
-            (fun destination ->
-               let id = int_of_string id in
-               let itinerary = Itinerary.add_destination destination id in
-               send_json
-                 ~code:200
-                 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
-            )
-            (Request_data.destination_addition_of_yojson (Yojson.Safe.from_string post))
-        in
-        wrap_body_json (fun () -> aux) () post
-    | _ ->
-        Eliom_registration.String.send ~code:404 ("", "")
+
+  let dummy_handler _ _ = Eliom_registration.String.send ~code:201 ("", "") in
+
+  let itinerary_post_handler _ (departure, (favorite, (destination, name))) =
+    let destination = BatOption.map coord_of_param destination in
+    let departure = coord_of_param departure in
+    let coords : Request_data.itinerary_creation = {destination; departure; favorite; name} in
+      wrap_errors
+        (fun coords ->
+         let itinerary = Itinerary.create coords in
+         send_json
+           ~code:200
+           (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
+        )
+	(`Ok coords)
   in
-  let put_handler get put =
-    match get with
-    | [id] ->
-        let aux put =
-          wrap_errors
-            (fun put ->
-               let id = int_of_string id in
-               let itinerary = Itinerary.edit put id in
-               send_json
-                 ~code:200
-                 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
-            )
-            (Request_data.itinerary_edition_of_yojson (Yojson.Safe.from_string put))
-        in
-        wrap_body_json (fun () -> aux) () put
-    | [id; "destinations"; initial_position] ->
-        let aux put =
-          wrap_errors
-            (fun put ->
-               let id = int_of_string id in
-               let initial_position = int_of_string initial_position in
-               let itinerary = Itinerary.edit_destination put ~initial_position id in
-               send_json
-                 ~code:200
-                 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
-            )
-            (Request_data.Destination_edition.of_yojson (Yojson.Safe.from_string put))
-        in
-        wrap_body_json (fun () -> aux) () put
-    | _ ->
-        Eliom_registration.String.send ~code:404 ("", "")
+
+  let itinerary_get_handler id () =
+    let itinerary = Itinerary.get id in
+    send_json ~code:200 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
   in
+
+  let itinerary_put_handler (id, (departure, (favorite, name))) _ =
+    let departure = BatOption.map coord_of_param departure in
+    let coords : Request_data.itinerary_edition = {departure; favorite; name} in
+    wrap_errors
+      (fun coords ->
+         let itinerary = Itinerary.edit coords id in
+         send_json
+           ~code:200
+           (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
+      )
+      (`Ok coords)
+  in
+
+  let destinations_post_handler id (destination, position) =
+    let destination = coord_of_param destination in
+    let request = {destination; position} in
+    wrap_errors
+      (fun destination ->
+       let itinerary = Itinerary.add_destination destination id in
+       send_json
+         ~code:200
+         (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
+      )
+      (`Ok request) in
+
+  let destinations_put_handler ((id, pos), (destination, position)) _ =
+    let edit : Request_data.Destination_edition.t = {destination = BatOption.map coord_of_param destination; position} in
+    wrap_errors
+      (fun put ->
+        let itinerary = Itinerary.edit_destination put ~initial_position:pos id in
+        send_json
+         ~code:200
+         (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
+    )
+    (`Ok edit)
+  in
+
   let delete_handler get delete =
     match get with
     | [id; "destinations"; position] ->
@@ -172,29 +179,18 @@ let () =
     | _ ->
         Eliom_registration.String.send ~code:404 ("", "")
   in
-  let get_handler get () =
-    match get with
-    | [id; "coordinates"; zoom] ->
-        let id = int_of_string id in
-        let zoom = int_of_string zoom in
-        let zoom = Itinerary.Zoomlevel.create zoom in
-        let coords = Itinerary.get_coordinates ~zoom id in
-        send_json ~code:200 (Yojson.Safe.to_string (Itinerary.coordinate_list_to_yojson coords))
-    | [id; "tiles"; z; x; y] ->
-        let id = int_of_string id in
-        let z = int_of_string z in
-        let x = int_of_string x in
-        let y = int_of_string y in
-        let z = Itinerary.Zoomlevel.create z in
-        let image = Itinerary.get_image ~x ~y ~z id in
-        Eliom_registration.String.send (image, "image/png")
-    | [id] ->
-        let id = int_of_string id in
-        let itinerary = Itinerary.get id in
-        send_json ~code:200 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
-    | _ ->
-        Eliom_registration.String.send ~code:404 ("", "")
+
+  let tiles_get_handler (id, (z, (x, y))) _ =
+    let z = Itinerary.Zoomlevel.create z in
+    let image = Itinerary.get_image ~x ~y ~z id in
+    Eliom_registration.String.send (image, "image/png") in
+
+  let coords_get_handler (id, z) _ =
+    let zoom = Itinerary.Zoomlevel.create z in
+    let coords = Itinerary.get_coordinates ~zoom id in
+    send_json ~code:200 (Yojson.Safe.to_string (Itinerary.coordinate_list_to_yojson coords))
   in
+
   let get_handler_with_params (search, (owner, (favorite, ordering))) () =
     let params =
       { Request_data.search
@@ -206,42 +202,104 @@ let () =
     let itineraries = Itinerary.get_all params in
     send_json ~code:200 (Yojson.Safe.to_string (Itinerary.itineraries_to_yojson itineraries))
   in
-  let service =
-    Eliom_service.Http.put_service
-      ~path:["itineraries"]
-      ~get_params:(suffix (all_suffix "params"))
-      ()
-  in
-  Eliom_registration.Any.register ~service put_handler;
-  let service =
-    Eliom_service.Http.delete_service
-      ~path:["itineraries"]
-      ~get_params:(suffix (all_suffix "params"))
-      ()
-  in
-  Eliom_registration.Any.register ~service delete_handler;
+
+  (* let service = *)
+  (*   Eliom_service.Http.delete_service *)
+  (*     ~path:["itineraries"] *)
+  (*     ~get_params:(suffix (all_suffix "params")) *)
+  (*     () *)
+  (* in *)
+  (* Eliom_registration.Any.register ~service delete_handler; *)
+
   let service =
     Eliom_service.Http.service
       ~path:["itineraries"]
-      ~get_params:(suffix (all_suffix "params"))
+      ~get_params:(suffix (int "id"))
       ()
   in
-  Eliom_registration.Any.register ~service get_handler;
-  let service =
-    Eliom_service.Http.post_service
-      ~fallback:service
-      ~post_params:raw_post_data
-      ()
-  in
-  Eliom_registration.Any.register ~service post_handler;
+  Eliom_registration.Any.register ~service itinerary_get_handler;
+
   let service =
     Eliom_service.Http.service
-      ~path:["itineraries"]
+      ~path:["itineraries";""]
       ~get_params:(opt (string "search")
                    ** opt (string "owner")
                    ** opt (bool "favorite")
-                   ** opt (string "ordering")
-                  )
+                   ** opt (string "ordering"))
       ()
   in
-  Eliom_registration.Any.register ~service get_handler_with_params
+  Eliom_registration.Any.register ~service get_handler_with_params;
+
+  let service =
+    Eliom_service.Http.post_service
+      ~fallback:service
+      ~post_params:(string "departure"
+		    ** opt (bool "favorite")
+		    ** opt (string "destination")
+		    ** opt (string "name"))
+     ()
+  in
+  Eliom_registration.Any.register ~service itinerary_post_handler;
+
+  let service =
+    Eliom_service.Http.put_service
+      ~path:["itineraries";""]
+       ~get_params:(suffix_prod
+       		      (int "id")
+       		      (opt (string "departure")
+       		    ** opt (bool "favorite")
+       		    ** opt (string "name")))
+      ()
+  in
+  Eliom_registration.Any.register ~service itinerary_put_handler;
+
+  (* dummy get service *)
+  let service =
+    Eliom_service.Http.service
+      ~path:["itineraries";"destinations"]
+      ~get_params:(suffix (int "id"))
+      () in
+  Eliom_registration.Any.register ~service dummy_handler;
+
+  let service =
+    Eliom_service.Http.post_service
+      ~fallback:service
+      ~post_params:(
+       		     (string "destination"
+       		      ** opt (int "position")))
+     ()
+  in
+  Eliom_registration.Any.register ~service destinations_post_handler;
+  let service =
+    Eliom_service.Http.put_service
+      ~path:["itineraries";"destinations"]
+       ~get_params:(suffix_prod
+       		      (int "id" ** int "pos")
+       		      (opt (string "destination") **
+                 opt (int "position")))
+      ()
+  in
+  Eliom_registration.Any.register ~service destinations_put_handler;
+
+ let service =
+    Eliom_service.Http.service
+      ~path:["itineraries";"tiles"]
+      ~get_params:(suffix (
+                   int "id" **
+                   int "z" **
+                   int "x" **
+                   int "y"))
+      ()
+  in
+  Eliom_registration.Any.register ~service tiles_get_handler;
+
+  let service =
+    Eliom_service.Http.service
+      ~path:["itineraries";"coordinates"]
+      ~get_params:(suffix (
+                   int "id" **
+                   int "z"))
+      () in
+  Eliom_registration.Any.register ~service coords_get_handler
+
+
