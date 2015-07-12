@@ -230,7 +230,9 @@ let () =
   let service =
     Eliom_service.Http.post_service
       ~fallback:service
-      ~post_params:raw_post_data
+      ~post_params:((string "departure")
+                   ** opt (string "favorite")
+                   ** opt (bool "destination"))
       ()
   in
   Eliom_registration.Any.register ~service post_handler;
