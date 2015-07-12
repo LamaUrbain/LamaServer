@@ -25,7 +25,7 @@ RUN echo 'true: -traverse' >> _tags
 RUN echo 'true: not_hygienic' >> _tags
 RUN eval `opam config env`; make
 
-RUN sed -i 's/MAP/libosmscout\/maps\/ile-de-france-latest/g' ocsigenserver.conf
+RUN sed -i 's/MAP/libosmscout\/maps\/picardie-latest/g' ocsigenserver.conf
 RUN sed -i 's/STYLE/libosmscout\/stylesheets\/standard.oss/g' ocsigenserver.conf
 
 EXPOSE 8080
