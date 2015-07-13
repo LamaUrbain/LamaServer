@@ -26,7 +26,8 @@ CREATE TABLE users_table (
   password text NOT NULL,
   email dom_mail NOT NULL,
   id integer PRIMARY KEY,
-  created timestamp NOT NULL default CURRENT_timestamp
+  created timestamp NOT NULL default CURRENT_timestamp,
+  UNIQUE(username)
 );
 ALTER TABLE users_table OWNER TO lamaurbain;
 
