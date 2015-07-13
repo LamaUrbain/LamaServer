@@ -5,23 +5,6 @@ let (>>=) = Lwt.(>>=)
 
 let json_mime_type = "application/json"
 
-let get_params =
-  Eliom_parameter.(suffix (neopt (int "id")))
-
-let path_users = ["users"]
-
-let read_service =
-  Eliom_service.Http.service
-    ~path:path_users
-    ~get_params
-    ()
-
-let create_service =
-  Eliom_service.Http.post_service
-    ~fallback:read_service
-    ~post_params:Eliom_parameter.raw_post_data
-    ()
-
 let send_json ~code json =
   Eliom_registration.String.send ~code (json, json_mime_type)
 
@@ -29,7 +12,7 @@ let send_error ~code error_message =
   send_json ~code error_message
 
 let send_success ?(content_type = "") ?(content = "") () =
-  Eliom_registration.String.send ~code:200 (content_type, content)
+  Eliom_registration.String.send ~code:200 (content, content_type)
 
 let check_content_type ~mime_type content_type =
   match content_type with
@@ -41,7 +24,7 @@ let read_raw_content ?(length = 4096) raw_content =
   let content_stream = Ocsigen_stream.get raw_content in
   Ocsigen_stream.string_of_stream length content_stream
 
-let read_handler id_opt () =
+let user_get_handler id_opt () =
   match id_opt with
   | None ->
     send_error ~code:404 "Missing id"
@@ -73,10 +56,8 @@ let wrap_errors f = function
   | `Ok x -> f x
   | `Error x -> send_error ~code:400 ("Provided JSON is not valid: " ^ x)
 
-let create_handler =
-  wrap_body_json
-    (fun _ location_str ->
-       let open Request_data in
+let user_post_handler _ (username ,(password, email))  =
+    let user = {username; password;email} in
        wrap_errors
          (fun user ->
             D.create_user
@@ -84,13 +65,7 @@ let create_handler =
               ~password:user.password
               ~email:user.email
             >>= fun u -> send_success ~content:(Yojson.Safe.to_string (Users.to_yojson u)) ()
-         )
-         (user_creation_of_yojson (Yojson.Safe.from_string location_str))
-    )
-
-let _ = Eliom_registration.Any.register read_service read_handler
-
-let _ = Eliom_registration.Any.register create_service create_handler
+         ) (`Ok user)
 
 open Eliom_parameter
 
@@ -306,4 +281,21 @@ let () =
                    suffix_const "coordinates" **
                    int "z"))
       () in
-  Eliom_registration.Any.register ~service coords_get_handler
+  Eliom_registration.Any.register ~service coords_get_handler;
+
+  let service =
+    Eliom_service.Http.service
+      ~path:["users"]
+      ~get_params:(suffix (neopt (int "id")))
+      () in
+  Eliom_registration.Any.register ~service user_get_handler;
+
+  let service =
+    Eliom_service.Http.post_service
+      ~fallback:service
+      ~post_params:(string "username"
+                    ** (string "password")
+                    ** (string "email"))
+      ()
+  in
+  Eliom_registration.Any.register ~service user_post_handler;
