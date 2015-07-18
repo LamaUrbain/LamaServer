@@ -23,15 +23,15 @@ let users_table =
 
 let auth_table = (<:table< auth_table (
   token text NOT NULL,
-  id integer NOT NULL,
+  owner integer NOT NULL,
   created timestamp NOT NULL DEFAULT(localtimestamp ())
   ) >>)
 
 let create_user ~username ~password ~email =
   Db.value (<:value< $users_table$?id >>)
   >>= fun id ->
-  Db.query
-    <:insert< $users_table$ :=
+    Db.query
+      <:insert< $users_table$ :=
                  {
                  username = $string:username$;
                  password = $string:password$;
@@ -39,13 +39,13 @@ let create_user ~username ~password ~email =
                  created = $users_table$?created;
                  id = $int32:id$;
                  } >>
-  >>= fun () ->
+  >>= fun _ ->
   Lwt.return
     Users.({
         username;
         password;
         email;
-	created = "";
+        created = "";
         id = Int32.to_int id;
       })
 
@@ -75,3 +75,43 @@ let find_user id =
             user_ in $users_table$;
             user_.id = $int32:id$; >>
     >|= to_user
+
+let create_session ~user =
+  let token = "lol" in
+  let id = Int32.of_int user.Users.id in
+  Db.query
+    <:insert< $auth_table$ :=
+     {
+     token = $string:token$;
+     owner = $int32:id$;
+     created = $auth_table$?created;
+     } >>
+  >>= fun _ ->
+  Lwt.return
+    Sessions.({
+		 token;
+		 owner = id;
+		 created = "";
+  })
+
+let to_session =
+  let open Sessions in
+  let f x =
+    {
+    token = x#!token;
+    owner = x#!owner;
+    created = string_of_calendar x#!created;
+    }
+  in
+  Option.map f
+
+let find_session token =
+  Db.view_opt
+    <:view< {
+            token = auth_.token;
+            owner = auth_.owner;
+            created = auth_.created;
+            } |
+            auth_ in $auth_table$;
+            auth_.token = $string:token$; >>
+    >|= to_session

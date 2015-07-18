@@ -67,6 +67,42 @@ let user_post_handler _ (username ,(password, email))  =
             >>= fun u -> send_success ~content:(Yojson.Safe.to_string (Users.to_yojson u)) ()
          ) (`Ok user)
 
+let session_post_handler _ (userid, password)  =
+  D.find_user userid >>= fun u ->
+  match u with
+    | Some user_t when user_t.password <> password ->
+       send_error
+	 ~code:400
+	 ("Password don't match")
+    | Some user_t ->
+       wrap_errors
+         (fun user ->
+            D.create_session ~user
+            >>= fun s -> send_success ~content:(Yojson.Safe.to_string (Sessions.to_yojson s)) ()
+         ) (`Ok user_t)
+    | otherwise ->
+        send_error
+          ~code:404
+          ("User not found")
+
+let session_get_handler token_opt () =
+  match token_opt with
+  | None ->
+    send_error ~code:404 "Missing id"
+  | Some token ->
+    (
+      D.find_session token
+      >>= function
+      | Some s ->
+        send_json
+          ~code:200
+          (Yojson.Safe.to_string (Sessions.to_yojson s))
+      | _ ->
+        send_error
+          ~code:404
+          ("User not found")
+    )
+
 open Eliom_parameter
 
 let coord_of_param loc =
@@ -299,3 +335,19 @@ let () =
       ()
   in
   Eliom_registration.Any.register ~service user_post_handler;
+
+  let service =
+    Eliom_service.Http.service
+      ~path:["sessions"]
+      ~get_params:(suffix (neopt (string "token")))
+      () in
+  Eliom_registration.Any.register ~service session_get_handler;
+
+  let service =
+    Eliom_service.Http.post_service
+      ~fallback:service
+      ~post_params:(int "user_id"
+                    ** (string "password"))
+      ()
+  in
+  Eliom_registration.Any.register ~service session_post_handler;

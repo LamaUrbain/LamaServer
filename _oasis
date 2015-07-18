@@ -19,6 +19,7 @@ Library "LamaUrbain"
     Site_services,
     Site_registration,
     Users,
+    Sessions,
     Utils,
     Db,
     Request_data,
