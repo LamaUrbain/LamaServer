@@ -6,6 +6,7 @@ sig
   val delete_user : int -> unit Lwt.t
   val create_session : user:Users.t -> Sessions.t Lwt.t
   val find_session : string -> Sessions.t option Lwt.t
+  val delete_session : string -> unit Lwt.t
 end
 
 module Db =
@@ -17,4 +18,5 @@ module Db =
     let delete_user = M.delete_user
     let create_session = M.create_session
     let find_session = M.find_session
+    let delete_session = M.delete_session
  end

@@ -141,3 +141,7 @@ let find_session token =
             auth_ in $auth_table$;
             auth_.token = $string:token$; >>
     >|= to_session
+
+let delete_session token =
+  Db.query
+    (<:delete< _session in $auth_table$ | _session.token = $string:token$ >>)
