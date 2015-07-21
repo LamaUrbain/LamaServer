@@ -90,9 +90,8 @@ let find_user_username username =
     >|= to_user
 
 let delete_user id =
-  let id = Int32.of_int id in
   Db.query
-    (<:delete< _user in $users_table$ | _user.id = $int32:id$ >>)
+    (<:delete< _user in $users_table$ | _user.username = $string:id$ >>)
 
 let gen_str length =
   let gen() = match Random.int(26+26+10) with

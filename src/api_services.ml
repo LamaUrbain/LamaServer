@@ -104,7 +104,7 @@ let session_get_handler token_opt () =
     )
 
 let users_delete_handler (id, token) _ =
-  D.find_user id >>= fun u ->
+  D.find_user_username id >>= fun u ->
   match u with
     | Some user_t ->
        wrap_errors
@@ -377,7 +377,7 @@ let () =
   let service =
     Eliom_service.Http.delete_service
       ~path:["users"]
-      ~get_params:(suffix_prod (int "id") (string "token"))
+      ~get_params:(suffix_prod (string "id") (string "token"))
       ()
   in
   Eliom_registration.Any.register ~service users_delete_handler;
