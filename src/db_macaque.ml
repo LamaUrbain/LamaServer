@@ -89,6 +89,11 @@ let find_user_username username =
             user_.username = $string:username$; >>
     >|= to_user
 
+let delete_user id =
+  let id = Int32.of_int id in
+  Db.query
+    (<:delete< _user in $users_table$ | _user.id = $int32:id$ >>)
+
 let gen_str length =
   let gen() = match Random.int(26+26+10) with
   n when n < 26 -> int_of_char 'a' + n

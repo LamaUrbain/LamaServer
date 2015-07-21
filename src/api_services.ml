@@ -103,6 +103,20 @@ let session_get_handler token_opt () =
           ("User not found")
     )
 
+let users_delete_handler (id, token) _ =
+  D.find_user id >>= fun u ->
+  match u with
+    | Some user_t ->
+       wrap_errors
+         (fun user ->
+	  D.delete_user id
+	    >>= fun s -> send_success ~content:"" ()
+         ) (`Ok user_t)
+    | otherwise ->
+        send_error
+          ~code:404
+          ("User not found")
+
 open Eliom_parameter
 
 let coord_of_param loc =
@@ -351,3 +365,11 @@ let () =
       ()
   in
   Eliom_registration.Any.register ~service session_post_handler;
+
+  let service =
+    Eliom_service.Http.delete_service
+      ~path:["users"]
+      ~get_params:(suffix_prod (int "id") (string "token"))
+      ()
+  in
+  Eliom_registration.Any.register ~service users_delete_handler;
