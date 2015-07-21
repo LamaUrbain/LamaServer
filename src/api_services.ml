@@ -57,7 +57,7 @@ let wrap_errors f = function
   | `Error x -> send_error ~code:400 ("Provided JSON is not valid: " ^ x)
 
 let user_post_handler _ (username ,(password, email))  =
-    let user = {username; password;email} in
+    let user = {username;password;email} in
        wrap_errors
          (fun user ->
             D.create_user
@@ -67,8 +67,8 @@ let user_post_handler _ (username ,(password, email))  =
             >>= fun u -> send_success ~content:(Yojson.Safe.to_string (Users.to_yojson u)) ()
          ) (`Ok user)
 
-let session_post_handler _ (userid, password)  =
-  D.find_user userid >>= fun u ->
+let session_post_handler _ (username, password)  =
+  D.find_user_username username >>= fun u ->
   match u with
     | Some user_t when user_t.password <> password ->
        send_error
@@ -346,7 +346,7 @@ let () =
   let service =
     Eliom_service.Http.post_service
       ~fallback:service
-      ~post_params:(int "user_id"
+      ~post_params:(string "username"
                     ** (string "password"))
       ()
   in

@@ -23,7 +23,7 @@ let users_table =
 
 let auth_table = (<:table< auth_table (
   token text NOT NULL,
-  owner integer NOT NULL,
+  owner text NOT NULL,
   created timestamp NOT NULL DEFAULT(localtimestamp ())
   ) >>)
 
@@ -76,21 +76,42 @@ let find_user id =
             user_.id = $int32:id$; >>
     >|= to_user
 
+let find_user_username username =
+  Db.view_opt
+    <:view< {
+            username = user_.username;
+            password = user_.password;
+            email = user_.email;
+            created = user_.created;
+            id = user_.id;
+            } |
+            user_ in $users_table$;
+            user_.username = $string:username$; >>
+    >|= to_user
+
+let gen_str length =
+  let gen() = match Random.int(26+26+10) with
+  n when n < 26 -> int_of_char 'a' + n
+                    | n when n < 26 + 26 -> int_of_char 'A' + n - 26
+                    | n -> int_of_char '0' + n - 26 - 26 in
+  let gen _ = String.make 1 (char_of_int(gen())) in
+  String.concat "" (Array.to_list (Array.init length gen));;
+
 let create_session ~user =
-  let token = "lol" in
-  let id = Int32.of_int user.Users.id in
+  let token = gen_str 32 in
+  let owner = user.Users.username in
   Db.query
     <:insert< $auth_table$ :=
      {
      token = $string:token$;
-     owner = $int32:id$;
+     owner = $string:owner$;
      created = $auth_table$?created;
      } >>
   >>= fun _ ->
   Lwt.return
     Sessions.({
 		 token;
-		 owner = id;
+		 owner;
 		 created = "";
   })
 
