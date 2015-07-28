@@ -146,7 +146,7 @@ let () =
     let coords : Request_data.itinerary_creation = {destination; departure; favorite; name} in
       wrap_errors
         (fun coords ->
-         let itinerary = Itinerary.create coords in
+         Itinerary.create coords >>= fun itinerary ->
          send_json
            ~code:200
            (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
@@ -155,7 +155,7 @@ let () =
   in
 
   let itinerary_get_handler id () =
-    let itinerary = Itinerary.get id in
+    Itinerary.get id >>= fun itinerary ->
     send_json ~code:200 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
   in
 
@@ -164,7 +164,7 @@ let () =
     let coords : Request_data.itinerary_edition = {departure; favorite; name} in
     wrap_errors
       (fun coords ->
-         let itinerary = Itinerary.edit coords id in
+         Itinerary.edit coords id >>= fun itinerary ->
          send_json
            ~code:200
            (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
@@ -177,7 +177,7 @@ let () =
     let request = {destination; position} in
     wrap_errors
       (fun destination ->
-       let itinerary = Itinerary.add_destination destination id in
+       Itinerary.add_destination destination id >>= fun itinerary ->
        send_json
          ~code:200
          (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
@@ -190,7 +190,7 @@ let () =
     in
     wrap_errors
       (fun put ->
-        let itinerary = Itinerary.edit_destination put ~initial_position:pos id in
+        Itinerary.edit_destination put ~initial_position:pos id >>= fun itinerary ->
         send_json
          ~code:200
          (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
@@ -203,13 +203,13 @@ let () =
     | [id; "destinations"; position] ->
         let id = int_of_string id in
         let position = int_of_string position in
-        let itinerary = Itinerary.delete_destination ~position id in
+        Itinerary.delete_destination ~position id >>= fun itinerary ->
         send_json
           ~code:200
           (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
     | [id] ->
         let id = int_of_string id in
-        Itinerary.delete id;
+        Itinerary.delete id >>= fun () ->
         Eliom_registration.String.send ~code:200 ("", "")
     | _ ->
         Eliom_registration.String.send ~code:404 ("", "")
@@ -217,12 +217,12 @@ let () =
 
   let tiles_get_handler (id, ((), (z, (x, y)))) _ =
     let z = Itinerary.Zoomlevel.create z in
-    let image = Itinerary.get_image ~x ~y ~z id in
+    Itinerary.get_image ~x ~y ~z id >>= fun image ->
     Eliom_registration.String.send (image, "image/png") in
 
   let coords_get_handler (id, ((), z)) _ =
     let zoom = Itinerary.Zoomlevel.create z in
-    let coords = Itinerary.get_coordinates ~zoom id in
+    Itinerary.get_coordinates ~zoom id >>= fun coords ->
     send_json ~code:200 (Yojson.Safe.to_string (Itinerary.coordinate_list_to_yojson coords))
   in
 
@@ -234,7 +234,7 @@ let () =
       ; ordering
       }
     in
-    let itineraries = Itinerary.get_all params in
+    Itinerary.get_all params >>= fun itineraries ->
     send_json ~code:200 (Yojson.Safe.to_string (Itinerary.itineraries_to_yojson itineraries))
   in
 

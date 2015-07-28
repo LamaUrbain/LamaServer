@@ -4,19 +4,22 @@ sig
   val find_user : int -> Users.t option Lwt.t
   val find_user_username : string -> Users.t option Lwt.t
   val delete_user : string -> unit Lwt.t
+
   val create_session : user:Users.t -> Sessions.t Lwt.t
   val find_session : string -> Sessions.t option Lwt.t
   val delete_session : string -> unit Lwt.t
+
+  val create_itinerary :
+    owner:string option ->
+    name:string option ->
+    favorite:bool option ->
+    departure:Request_data.coord ->
+    destinations:Request_data.coord list ->
+    Result_data.itinerary Lwt.t
+  val update_itinerary : int -> Result_data.itinerary -> unit Lwt.t
+  val delete_itinerary : int -> unit Lwt.t
+  val get_itinerary : int -> Result_data.itinerary Lwt.t
+  val get_all_itineraries : unit -> Result_data.itinerary list Lwt.t
 end
 
-module Db =
-  functor (M : DBENGINE) ->
-  struct
-    let create_user = M.create_user
-    let find_user = M.find_user
-    let find_user_username = M.find_user_username
-    let delete_user = M.delete_user
-    let create_session = M.create_session
-    let find_session = M.find_session
-    let delete_session = M.delete_session
- end
+module Db (M : DBENGINE) = M

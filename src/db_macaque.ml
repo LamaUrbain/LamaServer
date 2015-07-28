@@ -144,3 +144,15 @@ let find_session token =
 let delete_session token =
   Db.query
     (<:delete< _session in $auth_table$ | _session.token = $string:token$ >>)
+
+(*
+   let creation =
+   CalendarLib.Printer.Calendar.sprint "%iT%TZ" (CalendarLib.Calendar.now ())
+   in
+*)
+
+let create_itinerary = assert false
+let update_itinerary = assert false
+let delete_itinerary = assert false
+let get_itinerary = assert false
+let get_all_itineraries = assert false

@@ -1,3 +1,6 @@
+module Db = Db.Db(Db_macaque)
+
+open Lwt.Infix
 open Monomorphic
 
 type coordinate = {x : int; y : int} [@@deriving yojson]
@@ -163,16 +166,6 @@ end = struct
   let add path = ignore (find path)
 end
 
-let itineraries_cache : (int, Result_data.itinerary) Hashtbl.t =
-  Hashtbl.create 16
-
-let get_id =
-  let r = ref 0 in
-  fun () ->
-    let v = !r in
-    incr r;
-    v
-
 let () =
   let map = Config.map and style = Config.style in
   if not (Cpp.init map style) then
@@ -186,22 +179,12 @@ let create {Request_data.name; departure; destination; favorite} =
     | None ->
         []
   in
-  let id = get_id () in
-  let creation =
-    CalendarLib.Printer.Calendar.sprint "%iT%TZ" (CalendarLib.Calendar.now ())
-  in
-  let res =
-    { Result_data.id
-    ; owner = None (* TODO *)
-    ; name
-    ; creation
-    ; favorite
-    ; departure
-    ; destinations
-    }
-  in
-  Hashtbl.add itineraries_cache id res;
-  res
+  Db.create_itinerary
+    ~owner:None (* TODO *)
+    ~name
+    ~favorite
+    ~departure
+    ~destinations
 
 let rec waypoints_iter f = function
   | [] -> ()
@@ -215,8 +198,7 @@ let recache_itineraries itinerary =
 
 let get_coordinates ~zoom id =
   let magnification = Cpp.get_magnification (Unsigned.UInt32.of_int zoom) in
-  let itinerary = Hashtbl.find itineraries_cache id in
-  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  Db.get_itinerary id >>= fun itinerary ->
   let set = Hashtbl.create 512 in
   waypoints_iter
     (fun path ->
@@ -226,11 +208,10 @@ let get_coordinates ~zoom id =
     )
     (itinerary.Result_data.departure :: itinerary.Result_data.destinations);
   let to_int = Unsigned.Size_t.to_int in
-  Hashtbl.fold (fun (x, y) () acc -> {x = to_int x; y = to_int y} :: acc) set []
+  Lwt.return (Hashtbl.fold (fun (x, y) () acc -> {x = to_int x; y = to_int y} :: acc) set [])
 
 let get_image ~x ~y ~z id =
-  let itinerary = Hashtbl.find itineraries_cache id in
-  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  Db.get_itinerary id >>= fun itinerary ->
   let map_data = Cpp.create_map_data () in
   waypoints_iter
     (fun path ->
@@ -246,12 +227,12 @@ let get_image ~x ~y ~z id =
   if Cpp.paint x y width height map_data magnification context then
     let buf = Buffer.create 500_000 in
     Cairo.PNG.write_to_stream surface ~output:(Buffer.add_string buf);
-    Buffer.contents buf
+    Lwt.return (Buffer.contents buf)
   else
-    failwith "lol"
+    Lwt.fail_with "lol"
 
 let get_all {Request_data.search; owner; favorite; ordering} =
-  let itineraries = Hashtbl.fold (fun _ x xs -> x :: xs) itineraries_cache [] in
+  Db.get_all_itineraries () >>= fun itineraries ->
   let itineraries = match search with
     | Some search ->
         List.filter
@@ -297,16 +278,12 @@ let get_all {Request_data.search; owner; favorite; ordering} =
     | None ->
         itineraries
   in
-  itineraries
+  Lwt.return itineraries
 
-let get id =
-  let itinerary = Hashtbl.find itineraries_cache id in
-  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
-  itinerary
+let get = Db.get_itinerary
 
 let edit {Request_data.name; departure; favorite} id =
-  let itinerary = Hashtbl.find itineraries_cache id in
-  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  Db.get_itinerary id >>= fun itinerary ->
   let itinerary = match name with
     | None -> itinerary
     | Some name -> {itinerary with Result_data.name = Some name} (* TODO *)
@@ -325,24 +302,22 @@ let edit {Request_data.name; departure; favorite} id =
     | None -> itinerary
     | Some favorite -> {itinerary with Result_data.favorite = Some favorite} (* TODO *)
   in
-  Hashtbl.replace itineraries_cache id itinerary;
-  itinerary
+  Db.update_itinerary id itinerary >>= fun () ->
+  Lwt.return itinerary
 
 let add_destination {Request_data.destination; position} id =
-  let itinerary = Hashtbl.find itineraries_cache id in
-  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  Db.get_itinerary id >>= fun itinerary ->
   let destinations = match position with
     | Some position -> Utils.list_insert position destination itinerary.Result_data.destinations
     | None -> itinerary.Result_data.destinations @ [destination]
   in
   let itinerary = {itinerary with Result_data.destinations} in
   recache_itineraries itinerary;
-  Hashtbl.replace itineraries_cache id itinerary;
-  itinerary
+  Db.update_itinerary id itinerary >>= fun () ->
+  Lwt.return itinerary
 
 let edit_destination {Request_data.Destination_edition.destination; position} ~initial_position id =
-  let itinerary = Hashtbl.find itineraries_cache id in
-  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  Db.get_itinerary id >>= fun itinerary ->
   let destinations = match position with
     | Some position ->
         begin match destination with
@@ -358,17 +333,15 @@ let edit_destination {Request_data.Destination_edition.destination; position} ~i
   in
   let itinerary = {itinerary with Result_data.destinations} in
   recache_itineraries itinerary;
-  Hashtbl.replace itineraries_cache id itinerary;
-  itinerary
+  Db.update_itinerary id itinerary >>= fun () ->
+  Lwt.return itinerary
 
 let delete_destination ~position id =
-  let itinerary = Hashtbl.find itineraries_cache id in
-  let itinerary = Option.default_delayed (fun () -> assert false) itinerary in
+  Db.get_itinerary id >>= fun itinerary ->
   let destinations = List.remove_at position itinerary.Result_data.destinations in
   let itinerary = {itinerary with Result_data.destinations} in
   recache_itineraries itinerary;
-  Hashtbl.replace itineraries_cache id itinerary;
-  itinerary
+  Db.update_itinerary id itinerary >>= fun () ->
+  Lwt.return itinerary
 
-let delete id =
-  Hashtbl.remove itineraries_cache id
+let delete = Db.delete_itinerary
