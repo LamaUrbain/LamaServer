@@ -92,16 +92,33 @@ end = struct
     paint x y width height map_data magnification context
 end
 
-module PointCache = Hashtbl.Make(struct
-    type t = Request_data.coord
+module PointCache : sig
+  val find : Request_data.coord -> Cpp.point
+end = struct
+  module H = Hashtbl.Make(struct
+      type t = Request_data.coord
 
-    let equal x y =
-      Float.equal x.Request_data.latitude y.Request_data.latitude
-      && Float.equal x.Request_data.longitude y.Request_data.longitude
+      let equal x y =
+        Float.equal x.Request_data.latitude y.Request_data.latitude
+        && Float.equal x.Request_data.longitude y.Request_data.longitude
 
-    let hash x =
-      Hashtbl.hash (x.Request_data.latitude, x.Request_data.longitude)
-  end)
+      let hash x =
+        Hashtbl.hash (x.Request_data.latitude, x.Request_data.longitude)
+    end)
+
+  let self = H.create 16
+
+  let find k =
+    match H.find self k with
+    | point ->
+        point
+    | exception Not_found ->
+        let latitude = k.Request_data.latitude in
+        let longitude = k.Request_data.longitude in
+        let point = Cpp.create_point latitude longitude in
+        H.add self k point;
+        point
+end
 
 (*
 module Cache = Ocsigen_cache.Make(struct
@@ -111,8 +128,6 @@ module Cache = Ocsigen_cache.Make(struct
 
 let cache = new Cache.cache (assert false) 500
 *)
-let points_cache : Cpp.point PointCache.t =
-  PointCache.create 16
 
 module ItineraryCache = Hashtbl.Make(struct
     type t = (Request_data.coord * Request_data.coord)
@@ -146,17 +161,6 @@ let () =
   if not (Cpp.init map style) then
     failwith "DB init failed"
 
-let create_point coord =
-  match PointCache.find points_cache coord with
-  | point ->
-      point
-  | exception Not_found ->
-      let point =
-        Cpp.create_point coord.Request_data.latitude coord.Request_data.longitude
-      in
-      PointCache.add points_cache coord point;
-      point
-
 let cache_itinerary (departure, departure_point) (destination, destination_point) =
   let path = (departure, destination) in
   if not (ItineraryCache.mem itinerary_cache path) then begin
@@ -165,10 +169,10 @@ let cache_itinerary (departure, departure_point) (destination, destination_point
   end
 
 let create {Request_data.name; departure; destination; favorite} =
-  let departure_point = create_point departure in
+  let departure_point = PointCache.find departure in
   let destinations = match destination with
     | Some destination ->
-        let destination_point = create_point destination in
+        let destination_point = PointCache.find destination in
         cache_itinerary
           (departure, departure_point)
           (destination, destination_point);
@@ -201,8 +205,8 @@ let rec waypoints_iter f = function
 let recache_itineraries itinerary =
   waypoints_iter
     (fun (x, y) ->
-       let point_x = create_point x in
-       let point_y = create_point y in
+       let point_x = PointCache.find x in
+       let point_y = PointCache.find y in
        cache_itinerary (x, point_x) (y, point_y)
     )
     (itinerary.Result_data.departure :: itinerary.Result_data.destinations)
@@ -309,12 +313,12 @@ let edit {Request_data.name; departure; favorite} id =
     | None ->
         itinerary
     | Some departure ->
-        let departure_point = create_point departure in
+        let departure_point = PointCache.find departure in
         begin match itinerary.Result_data.destinations with
         | [] ->
             ()
         | destination::_ ->
-            let destination_point = create_point destination in
+            let destination_point = PointCache.find destination in
             cache_itinerary
               (departure, departure_point)
               (destination, destination_point);
