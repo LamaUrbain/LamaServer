@@ -9,7 +9,7 @@ type itineraries = Result_data.itinerary list [@@deriving yojson]
 
 open BatteriesExceptionless
 
-type t = int
+type t = int32
 
 module Zoomlevel = struct
   type t = int
@@ -302,7 +302,7 @@ let edit {Request_data.name; departure; favorite} id =
     | None -> itinerary
     | Some favorite -> {itinerary with Result_data.favorite = Some favorite} (* TODO *)
   in
-  Db.update_itinerary id itinerary >>= fun () ->
+  Db.update_itinerary itinerary >>= fun () ->
   Lwt.return itinerary
 
 let add_destination {Request_data.destination; position} id =
@@ -313,7 +313,7 @@ let add_destination {Request_data.destination; position} id =
   in
   let itinerary = {itinerary with Result_data.destinations} in
   recache_itineraries itinerary;
-  Db.update_itinerary id itinerary >>= fun () ->
+  Db.update_itinerary itinerary >>= fun () ->
   Lwt.return itinerary
 
 let edit_destination {Request_data.Destination_edition.destination; position} ~initial_position id =
@@ -333,7 +333,7 @@ let edit_destination {Request_data.Destination_edition.destination; position} ~i
   in
   let itinerary = {itinerary with Result_data.destinations} in
   recache_itineraries itinerary;
-  Db.update_itinerary id itinerary >>= fun () ->
+  Db.update_itinerary itinerary >>= fun () ->
   Lwt.return itinerary
 
 let delete_destination ~position id =
@@ -341,7 +341,7 @@ let delete_destination ~position id =
   let destinations = List.remove_at position itinerary.Result_data.destinations in
   let itinerary = {itinerary with Result_data.destinations} in
   recache_itineraries itinerary;
-  Db.update_itinerary id itinerary >>= fun () ->
+  Db.update_itinerary itinerary >>= fun () ->
   Lwt.return itinerary
 
 let delete = Db.delete_itinerary

@@ -145,14 +145,104 @@ let delete_session token =
   Db.query
     (<:delete< _session in $auth_table$ | _session.token = $string:token$ >>)
 
-(*
-   let creation =
-   CalendarLib.Printer.Calendar.sprint "%iT%TZ" (CalendarLib.Calendar.now ())
-   in
-*)
+let itineraries_id_seq = (<:sequence< serial "itineraries_id_seq" >>)
 
-let create_itinerary = assert false
-let update_itinerary = assert false
-let delete_itinerary = assert false
-let get_itinerary = assert false
-let get_all_itineraries = assert false
+let itineraries_table =
+  (<:table< itineraries (
+    id integer NOT NULL DEFAULT(nextval $itineraries_id_seq$),
+    owner text,
+    name text,
+    creation timestamp NOT NULL DEFAULT(localtimestamp ()),
+    favorite boolean,
+    departure integer NOT NULL,
+    destinations int32_array NOT NULL
+   ) >>)
+
+let coords_id_seq = (<:sequence< serial "coords_id_seq" >>)
+
+let coords_table =
+  (<:table< coord (
+    id integer NOT NULL DEFAULT(nextval $coords_id_seq$),
+    address text,
+    latitude double NOT NULL,
+    longitude double NOT NULL
+  ) >>)
+
+let to_coord coord =
+  { Request_data.address = coord#?address
+  ; latitude = coord#!latitude
+  ; longitude = coord#!longitude
+  }
+
+let to_itinerary itinerary =
+  Db.view_one (<:view< t | t in $coords_table$; t.id = $itinerary#departure$ >>)
+  >|= to_coord >>= fun departure ->
+  let aux id =
+    let id = Option.default_delayed (fun () -> assert false) id in
+    Db.view_one (<:view< t | t in $coords_table$; t.id = $int32:id$ >>)
+    >|= to_coord
+  in
+  Lwt_list.map_s aux itinerary#!destinations
+  >|= fun destinations ->
+  { Result_data.id = itinerary#!id
+  ; owner = itinerary#?owner
+  ; name = itinerary#?name
+  ; creation = CalendarLib.Printer.Calendar.sprint "%iT%TZ" itinerary#!creation
+  ; favorite = itinerary#?favorite
+  ; departure
+  ; destinations
+  }
+
+let get_itinerary id =
+  Db.view_one (<:view< t | t in $itineraries_table$; t.id = $int32:id$ >>)
+  >>= to_itinerary
+
+let create_coord coord =
+  let id = (<:value< $coords_table$?id >>) in
+  Db.query
+    (<:insert< $coords_table$ := {
+      id = $id$;
+      address = of_option $Option.map Sql.Value.string coord.Request_data.address$;
+      latitude = $float:coord.Request_data.latitude$;
+      longitude = $float:coord.Request_data.longitude$;
+    } >>)
+  >>= fun () ->
+  Db.value id
+
+let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
+  let itinerary_id = (<:value< $itineraries_table$?id >>) in
+  create_coord departure >>= fun departure_id ->
+  Lwt_list.map_s create_coord destinations >>= fun destinations -> (* TODO: PARALLEL ? *)
+  let destinations = List.map Option.some destinations in
+  Db.query
+    (<:insert< $itineraries_table$ := {
+      id = $itinerary_id$;
+      owner = of_option $Option.map Sql.Value.string owner$;
+      name = of_option $Option.map Sql.Value.string name$;
+      creation = $itineraries_table$?creation;
+      favorite = of_option $Option.map Sql.Value.bool favorite$;
+      departure = $int32:departure_id$;
+      destinations = $int32_array:destinations$;
+    } >>)
+  >>= fun () ->
+  Db.value itinerary_id >>= get_itinerary
+
+let update_itinerary itinerary =
+  create_coord itinerary.Result_data.departure >>= fun departure_id ->
+  Lwt_list.map_s create_coord itinerary.Result_data.destinations >>= fun destinations -> (* TODO: PARALLEL ? *)
+  let destinations = List.map Option.some destinations in
+  Db.query
+    (<:update< t in $itineraries_table$ := {
+      owner = of_option $Option.map Sql.Value.string itinerary.Result_data.owner$;
+      name = of_option $Option.map Sql.Value.string itinerary.Result_data.name$;
+      favorite = of_option $Option.map Sql.Value.bool itinerary.Result_data.favorite$;
+      departure = $int32:departure_id$;
+      destinations = $int32_array:destinations$;
+    } | t.id = $int32:itinerary.Result_data.id$ >>)
+
+let delete_itinerary id =
+  Db.query (<:delete< t in $itineraries_table$ | t.id = $int32:id$ >>)
+
+let get_all_itineraries () =
+  Db.view (<:view< t | t in $itineraries_table$ >>)
+  >>= Lwt_list.map_s to_itinerary

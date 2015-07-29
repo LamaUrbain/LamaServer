@@ -31,6 +31,9 @@ CREATE TABLE users_table (
 );
 ALTER TABLE users_table OWNER TO lamaurbain;
 
+CREATE SEQUENCE users_id_seq;
+ALTER SEQUENCE users_id_seq OWNER TO lamaurbain;
+
 CREATE TABLE auth_table (
   token text NOT NULL PRIMARY KEY,
   owner text NOT NULL,
@@ -38,25 +41,27 @@ CREATE TABLE auth_table (
 );
 ALTER TABLE auth_table OWNER TO lamaurbain;
 
-CREATE TABLE coord_table (
+CREATE TABLE coords_table (
   id integer PRIMARY KEY,
   latitude real NOT NULL,
   longitude real NOT NULL,
-  created timestamp NOT NULL DEFAULT CURRENT_timestamp,
   address text
 );
-ALTER TABLE coord_table OWNER TO lamaurbain;
+ALTER TABLE coords_table OWNER TO lamaurbain;
 
-CREATE TABLE itinerary_table (
+CREATE SEQUENCE coords_id_seq;
+ALTER SEQUENCE coords_id_seq OWNER TO lamaurbain;
+
+CREATE TABLE itineraries_table (
   id integer PRIMARY KEY,
   owner integer,
   name dom_name,
   favorite boolean,
-  departure int NOT NULL,
-  created timestamp NOT NULL DEFAULT CURRENT_timestamp,
-  destinations int[]
+  departure integer NOT NULL REFERENCES coords_table ON DELETE CASCADE,
+  creation timestamp NOT NULL,
+  destinations integer[] NOT NULL ELEMENT REFERENCES coords_table ON DELETE CASCADE
 );
-ALTER TABLE itinerary_table OWNER TO lamaurbain;
+ALTER TABLE itineraries_table OWNER TO lamaurbain;
 
-CREATE SEQUENCE users_id_seq;
-ALTER SEQUENCE users_id_seq OWNER TO lamaurbain;
+CREATE SEQUENCE itineraries_id_seq;
+ALTER SEQUENCE itineraries_id_seq OWNER TO lamaurbain;

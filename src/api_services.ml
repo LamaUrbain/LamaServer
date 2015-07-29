@@ -201,14 +201,14 @@ let () =
   let delete_handler get delete =
     match get with
     | [id; "destinations"; position] ->
-        let id = int_of_string id in
+        let id = Int32.of_string id in
         let position = int_of_string position in
         Itinerary.delete_destination ~position id >>= fun itinerary ->
         send_json
           ~code:200
           (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
     | [id] ->
-        let id = int_of_string id in
+        let id = Int32.of_string id in
         Itinerary.delete id >>= fun () ->
         Eliom_registration.String.send ~code:200 ("", "")
     | _ ->
@@ -249,7 +249,7 @@ let () =
   let service =
     Eliom_service.Http.service
       ~path:["itineraries"]
-      ~get_params:(suffix (int "id"))
+      ~get_params:(suffix (int32 "id"))
       ()
   in
   Eliom_registration.Any.register ~service itinerary_get_handler;
@@ -280,7 +280,7 @@ let () =
     Eliom_service.Http.put_service
       ~path:["itineraries"]
       ~get_params:(suffix_prod
-                     (int "id")
+                     (int32 "id")
                      (opt (string "departure")
                       ** opt (bool "favorite")
                       ** opt (string "name")
@@ -294,7 +294,7 @@ let () =
   let service =
     Eliom_service.Http.service
       ~path:["itineraries"]
-      ~get_params:(suffix (int "id" ** suffix_const "destinations"))
+      ~get_params:(suffix (int32 "id" ** suffix_const "destinations"))
       () in
   Eliom_registration.Any.register ~service dummy_handler;
 
@@ -310,7 +310,7 @@ let () =
     Eliom_service.Http.put_service
       ~path:["itineraries"]
       ~get_params:(suffix_prod
-                     (int "id" ** suffix_const "destinations" ** int "pos")
+                     (int32 "id" ** suffix_const "destinations" ** int "pos")
                      (opt (string "destination") ** opt (int "position"))
                   )
       ()
@@ -321,7 +321,7 @@ let () =
     Eliom_service.Http.service
       ~path:["itineraries"]
       ~get_params:(suffix (
-                   int "id" **
+                   int32 "id" **
                    suffix_const "tiles" **
                    int "z" **
                    int "x" **
@@ -335,7 +335,7 @@ let () =
     Eliom_service.Http.service
       ~path:["itineraries"]
       ~get_params:(suffix (
-                   int "id" **
+                   int32 "id" **
                    suffix_const "coordinates" **
                    int "z"))
       () in

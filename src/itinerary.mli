@@ -1,4 +1,4 @@
-type t = int
+type t = int32
 
 type coordinate = {x : int; y : int} [@@deriving yojson]
 type coordinate_list = coordinate list [@@deriving yojson]

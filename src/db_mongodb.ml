@@ -43,6 +43,12 @@ let find_user id =
       let username = Bson.get_element "username" doc |> Bson.get_string in
       let password = Bson.get_element "password" doc |> Bson.get_string in
       let email = Bson.get_element "email" doc |> Bson.get_string in
-      let created = "" in 
+      let created = "" in
       let open Users in
       Lwt.return (Some {username; password; email;id; created})
+
+let create_itinerary = assert false
+let update_itinerary = assert false
+let delete_itinerary = assert false
+let get_itinerary = assert false
+let get_all_itinerary = assert false

@@ -1,5 +1,5 @@
 type itinerary =
-  { id : int
+  { id : int32
   ; owner : string option
   ; name : string option
   ; creation : string
