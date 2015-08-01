@@ -198,25 +198,25 @@ let get_itinerary id =
   >>= to_itinerary
 
 let create_coord coord =
-  let id = (<:value< $coords_table$?id >>) in
+  Db.value (<:value< $coords_table$?id >>) >>= fun id ->
   Db.query
     (<:insert< $coords_table$ := {
-      id = $id$;
+      id = $int32:id$;
       address = of_option $Option.map Sql.Value.string coord.Request_data.address$;
       latitude = $float:coord.Request_data.latitude$;
       longitude = $float:coord.Request_data.longitude$;
     } >>)
-  >>= fun () ->
-  Db.value id
+  >|= fun () ->
+  id
 
 let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
-  let itinerary_id = (<:value< $itineraries_table$?id >>) in
+  Db.value (<:value< $itineraries_table$?id >>) >>= fun itinerary_id ->
   create_coord departure >>= fun departure_id ->
   Lwt_list.map_s create_coord destinations >>= fun destinations -> (* TODO: PARALLEL ? *)
   let destinations = List.map Option.some destinations in
   Db.query
     (<:insert< $itineraries_table$ := {
-      id = $itinerary_id$;
+      id = $int32:itinerary_id$;
       owner = of_option $Option.map Sql.Value.string owner$;
       name = of_option $Option.map Sql.Value.string name$;
       creation = $itineraries_table$?creation;
@@ -225,7 +225,7 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
       destinations = $int32_array:destinations$;
     } >>)
   >>= fun () ->
-  Db.value itinerary_id >>= get_itinerary
+  get_itinerary itinerary_id
 
 let update_itinerary itinerary =
   create_coord itinerary.Result_data.departure >>= fun departure_id ->
