@@ -148,7 +148,7 @@ let delete_session token =
 let itineraries_id_seq = (<:sequence< serial "itineraries_id_seq" >>)
 
 let itineraries_table =
-  (<:table< itineraries (
+  (<:table< itineraries_table (
     id integer NOT NULL DEFAULT(nextval $itineraries_id_seq$),
     owner text,
     name text,
@@ -161,7 +161,7 @@ let itineraries_table =
 let coords_id_seq = (<:sequence< serial "coords_id_seq" >>)
 
 let coords_table =
-  (<:table< coord (
+  (<:table< coords_table (
     id integer NOT NULL DEFAULT(nextval $coords_id_seq$),
     address text,
     latitude double NOT NULL,
