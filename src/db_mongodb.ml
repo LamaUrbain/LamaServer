@@ -59,7 +59,7 @@ let find_user_username username =
            username;
            password = Bson.get_element "password" doc |> Bson.get_string;
            email = Bson.get_element "email" doc |> Bson.get_string;
-           id = Bson.get_element "id" doc |> Bson.get_int32;
+           id = Bson.get_element "id" doc |> Bson.get_int32 |> Int32.to_int;
            created = "";
          }
       )
