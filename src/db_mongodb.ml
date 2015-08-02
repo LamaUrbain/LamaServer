@@ -260,7 +260,7 @@ let _get_itinerary doc =
       >>= fun destinations ->
       Lwt.return
         Result_data.{
-          id = (Bson.get_element "id" doc |> Bson.get_int32 |> Int32.to_int);
+          id = (Bson.get_element "id" doc |> Bson.get_int32);
           owner =
             (try
                Some (Bson.get_element "owner" doc |> Bson.get_string)
