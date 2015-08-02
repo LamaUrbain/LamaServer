@@ -244,34 +244,36 @@ let delete_itinerary id =
   |> Lwt.return
 
 let _get_itinerary doc =
-    match_lwt (Bson.get_element "departure" doc |> Bson.get_int32 |> get_coord) with
+  let open Lwt in
+  (Bson.get_element "departure" doc |> Bson.get_int32 |> get_coord)
+  =>> function
     | None -> Lwt.return None
     | Some departure ->
       Bson.get_element "destinations" doc
       |> Bson.get_list
       |> List.rev_map (fun x -> Bson.get_int32 x |> get_coord)
-         =>> Lwt_list.fold_left_s (fun acc -> function Some x -> x::acc | acc)
-         =>> fun destinations ->
-           Lwt.return
-             Result_data.{
-               id;
-               owner =
-                 (try
-                    Some (Bson.get_elements "owner" doc |> Bson.get_string)
-                  with _ -> None)
-               ;
-               name =
-                 (try
-                    Some (Bson.get_elements "name" doc |> Bson.get_string)
-                  with _ -> None);
-               creation = "";
-               favorite =
-                 (try
-                    Some (Bson.get_elements "favorite" doc |> Bson.get_double)
-                  with _ -> None);
-               departure;
-               destinations;
-             }
+          =>>  List.fold_left (fun acc -> function Some x -> (x::acc) | acc)
+          |> fun destinations ->
+          Lwt.return
+            Result_data.{
+              id;
+              owner =
+                (try
+                   Some (Bson.get_elements "owner" doc |> Bson.get_string)
+                 with _ -> None)
+              ;
+              name =
+                (try
+                   Some (Bson.get_elements "name" doc |> Bson.get_string)
+                 with _ -> None);
+              creation = "";
+              favorite =
+                (try
+                   Some (Bson.get_elements "favorite" doc |> Bson.get_double)
+                 with _ -> None);
+              departure;
+              destinations;
+            }
 
 let get_itinerary id =
   let open Lwt in
