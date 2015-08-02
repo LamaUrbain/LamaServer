@@ -252,7 +252,7 @@ let _get_itinerary doc =
       Bson.get_element "destinations" doc
       |> Bson.get_list
       |> List.rev_map (fun x -> Bson.get_int32 x |> get_coord)
-      |> List.fold_left (fun acc -> function Some x -> (x::acc) | _ -> acc)
+      |> List.fold_left (fun acc -> function Some x -> (x::acc) | _ -> acc) []
       >>= fun destinations ->
       Lwt.return
         Result_data.{
