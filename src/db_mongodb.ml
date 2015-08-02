@@ -196,7 +196,7 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
       )
   in
   Mongo.insert (Lazy.force itineraries_collection) [doc];
-    Request_data.{
+    Result_data.{
       id;
       owner;
       name;
