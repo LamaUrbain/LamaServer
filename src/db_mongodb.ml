@@ -208,7 +208,7 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
   |> Lwt.return
 
 let update_itinerary itinerary =
-  let open Request_data in
+  let open Result_data in
   let query =
     empty
     |> Bson.add_element "id" @@ Bson.create_int32 itinerary.id
