@@ -292,6 +292,7 @@ let get_itinerary id =
 
 
 let get_all_itineraries =
+  let open Lwt in
   empty
   |> Mongo.find (Lazy.force itineraries_collection)
   |> MongoReply.get_document_list
