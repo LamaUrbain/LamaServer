@@ -252,28 +252,28 @@ let _get_itinerary doc =
       Bson.get_element "destinations" doc
       |> Bson.get_list
       |> List.rev_map (fun x -> Bson.get_int32 x |> get_coord)
-          =>>  List.fold_left (fun acc -> function Some x -> (x::acc) | acc)
-          |> fun destinations ->
-          Lwt.return
-            Result_data.{
-              id;
-              owner =
-                (try
-                   Some (Bson.get_elements "owner" doc |> Bson.get_string)
-                 with _ -> None)
-              ;
-              name =
-                (try
-                   Some (Bson.get_elements "name" doc |> Bson.get_string)
-                 with _ -> None);
-              creation = "";
-              favorite =
-                (try
+      |> List.fold_left (fun acc -> function Some x -> (x::acc) | _ -> acc)
+      =>> fun destinations ->
+      Lwt.return
+        Result_data.{
+          id;
+          owner =
+            (try
+               Some (Bson.get_elements "owner" doc |> Bson.get_string)
+             with _ -> None)
+          ;
+          name =
+            (try
+               Some (Bson.get_elements "name" doc |> Bson.get_string)
+             with _ -> None);
+          creation = "";
+          favorite =
+            (try
                    Some (Bson.get_elements "favorite" doc |> Bson.get_double)
-                 with _ -> None);
-              departure;
-              destinations;
-            }
+             with _ -> None);
+          departure;
+          destinations;
+        }
 
 let get_itinerary id =
   let open Lwt in
