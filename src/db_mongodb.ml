@@ -107,7 +107,7 @@ let find_session token =
     Some
       Sessions.{
         token;
-        owner = Bson.get_element "owner" doc |> Bson.to_string;
+        owner = Bson.get_element "owner" doc |> Bson.get_string;
         created = "";
       }
     |> Lwt.return
@@ -269,7 +269,7 @@ let _get_itinerary doc =
           creation = "";
           favorite =
             (try
-                   Some (Bson.get_elements "favorite" doc |> Bson.get_double)
+               Some (Bson.get_elements "favorite" doc |> Bson.get_double)
              with _ -> None);
           departure;
           destinations;
