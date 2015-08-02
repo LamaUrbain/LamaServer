@@ -260,20 +260,20 @@ let _get_itinerary doc =
       >>= fun destinations ->
       Lwt.return
         Result_data.{
-          id;
+          id = (Bson.get_element "id" doc |> Bson.get_int32 |> Int32.to_int);
           owner =
             (try
-               Some (Bson.get_elements "owner" doc |> Bson.get_string)
+               Some (Bson.get_element "owner" doc |> Bson.get_string)
              with _ -> None)
           ;
           name =
             (try
-               Some (Bson.get_elements "name" doc |> Bson.get_string)
+               Some (Bson.get_element "name" doc |> Bson.get_string)
              with _ -> None);
           creation = "";
           favorite =
             (try
-               Some (Bson.get_elements "favorite" doc |> Bson.get_double)
+               Some (Bson.get_element "favorite" doc |> Bson.get_double)
              with _ -> None);
           departure;
           destinations;
@@ -284,10 +284,10 @@ let get_itinerary id =
   empty
   |> Bson.add_element "id" @@ Bson.create_int32 id
   |> Mongo.find_q_one (Lazy.force itineraries_collection)
-  |> MongoReply.get_document_lis
+  |> MongoReply.get_document_list
   |> function
   | [] -> Lwt.return None
-  | doc::_ ->  _get_itinerary doc
+  | doc::_ -> _get_itinerary doc
 
 
 let get_all_itineraries =
