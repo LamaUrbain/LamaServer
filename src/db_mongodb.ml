@@ -59,7 +59,7 @@ let find_user_username username =
            username;
            password = Bson.get_element "password" doc |> Bson.get_string;
            email = Bson.get_element "email" doc |> Bson.get_string;
-           id = Bson.get_element "id" doc |> Bson.get_int32;
+           id = Bson.get_element "id" doc |> Bson.get_int32 |> Int32.to_int;
            created = "";
          }
       )
@@ -107,7 +107,7 @@ let find_session token =
     Some
       Sessions.{
         token;
-        owner = Bson.get_element "owner" doc |> Bson.to_string;
+        owner = Bson.get_element "owner" doc |> Bson.get_string;
         created = "";
       }
     |> Lwt.return
@@ -196,7 +196,7 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
       )
   in
   Mongo.insert (Lazy.force itineraries_collection) [doc];
-    Request_data.{
+    Result_data.{
       id;
       owner;
       name;
@@ -208,7 +208,7 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
   |> Lwt.return
 
 let update_itinerary itinerary =
-  let open Request_data in
+  let open Result_data in
   let query =
     empty
     |> Bson.add_element "id" @@ Bson.create_int32 itinerary.id
@@ -244,49 +244,58 @@ let delete_itinerary id =
   |> Lwt.return
 
 let _get_itinerary doc =
-    match_lwt (Bson.get_element "departure" doc |> Bson.get_int32 |> get_coord) with
+  let open Lwt in
+  (Bson.get_element "departure" doc |> Bson.get_int32 |> get_coord)
+  >>= function
     | None -> Lwt.return None
     | Some departure ->
       Bson.get_element "destinations" doc
       |> Bson.get_list
       |> List.rev_map (fun x -> Bson.get_int32 x |> get_coord)
-         =>> Lwt_list.fold_left_s (fun acc -> function Some x -> x::acc | acc)
-         =>> fun destinations ->
-           Lwt.return
-             Result_data.{
-               id;
-               owner =
-                 (try
-                    Some (Bson.get_elements "owner" doc |> Bson.get_string)
-                  with _ -> None)
-               ;
-               name =
-                 (try
-                    Some (Bson.get_elements "name" doc |> Bson.get_string)
-                  with _ -> None);
-               creation = "";
-               favorite =
-                 (try
-                    Some (Bson.get_elements "favorite" doc |> Bson.get_double)
-                  with _ -> None);
-               departure;
-               destinations;
-             }
+      |> Lwt_list.fold_left_s
+        (fun acc e ->
+           e >>= (function Some x -> Lwt.return (x::acc) | None -> Lwt.return acc)
+        )
+        []
+      >>= fun destinations ->
+      Some
+        Result_data.{
+          id = (Bson.get_element "id" doc |> Bson.get_int32);
+          owner =
+            (try
+               Some (Bson.get_element "owner" doc |> Bson.get_string)
+             with _ -> None)
+          ;
+          name =
+            (try
+               Some (Bson.get_element "name" doc |> Bson.get_string)
+             with _ -> None);
+          creation = "";
+          favorite =
+            (try
+               Some (Bson.get_element "favorite" doc |> Bson.get_boolean)
+             with _ -> None);
+          departure;
+          destinations;
+        }
+      |> Lwt.return
 
 let get_itinerary id =
   let open Lwt in
   empty
   |> Bson.add_element "id" @@ Bson.create_int32 id
   |> Mongo.find_q_one (Lazy.force itineraries_collection)
-  |> MongoReply.get_document_lis
+  |> MongoReply.get_document_list
   |> function
   | [] -> Lwt.return None
-  | doc::_ ->  _get_itinerary doc
+  | doc::_ -> _get_itinerary doc
 
 
 let get_all_itineraries =
-  empty
-  |> Mongo.find (Lazy.force itineraries_collection)
+  let open Lwt in
+  Mongo.find (Lazy.force itineraries_collection)
   |> MongoReply.get_document_list
-  |> Lwt.rev_map_s _get_itinerary
-     =>> Lwt_list.fold_left_s (fun acc -> function Some x -> x::acc | None -> acc)
+  |> List.rev_map _get_itinerary
+  |> Lwt_list.fold_left_s
+    (fun acc e -> e >>= (function Some x -> Lwt.return (x::acc) | None -> Lwt.return acc))
+    []
