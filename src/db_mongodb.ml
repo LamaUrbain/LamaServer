@@ -273,7 +273,7 @@ let _get_itinerary doc =
           creation = "";
           favorite =
             (try
-               Some (Bson.get_element "favorite" doc |> Bson.get_bool)
+               Some (Bson.get_element "favorite" doc |> Bson.get_boolean)
              with _ -> None);
           departure;
           destinations;
