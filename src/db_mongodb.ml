@@ -258,7 +258,7 @@ let _get_itinerary doc =
         )
         []
       >>= fun destinations ->
-      Lwt.return
+      Some
         Result_data.{
           id = (Bson.get_element "id" doc |> Bson.get_int32);
           owner =
@@ -278,6 +278,7 @@ let _get_itinerary doc =
           departure;
           destinations;
         }
+      |> Lwt.return
 
 let get_itinerary id =
   let open Lwt in
