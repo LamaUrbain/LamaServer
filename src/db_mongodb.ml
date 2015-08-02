@@ -246,14 +246,14 @@ let delete_itinerary id =
 let _get_itinerary doc =
   let open Lwt in
   (Bson.get_element "departure" doc |> Bson.get_int32 |> get_coord)
-  =>> function
+  >>= function
     | None -> Lwt.return None
     | Some departure ->
       Bson.get_element "destinations" doc
       |> Bson.get_list
       |> List.rev_map (fun x -> Bson.get_int32 x |> get_coord)
       |> List.fold_left (fun acc -> function Some x -> (x::acc) | _ -> acc)
-      =>> fun destinations ->
+      >>= fun destinations ->
       Lwt.return
         Result_data.{
           id;
@@ -291,4 +291,4 @@ let get_all_itineraries =
   |> Mongo.find (Lazy.force itineraries_collection)
   |> MongoReply.get_document_list
   |> Lwt.rev_map_s _get_itinerary
-     =>> Lwt_list.fold_left_s (fun acc -> function Some x -> x::acc | None -> acc)
+     >>= Lwt_list.fold_left_s (fun acc -> function Some x -> x::acc | None -> acc)
