@@ -17,5 +17,5 @@ val create_itinerary :
   Result_data.itinerary Lwt.t
 val update_itinerary : Result_data.itinerary -> unit Lwt.t
 val delete_itinerary : int32 -> unit Lwt.t
-val get_itinerary : int32 -> Result_data.itinerary Lwt.t
+val get_itinerary : int32 -> Result_data.itinerary option Lwt.t
 val get_all_itineraries : unit -> Result_data.itinerary list Lwt.t
