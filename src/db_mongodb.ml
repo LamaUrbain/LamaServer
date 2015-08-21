@@ -291,7 +291,7 @@ let get_itinerary id =
   | doc::_ -> _get_itinerary doc
 
 
-let get_all_itineraries =
+let get_all_itineraries _ =
   let open Lwt in
   Mongo.find (Lazy.force itineraries_collection)
   |> MongoReply.get_document_list
