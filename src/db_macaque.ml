@@ -195,7 +195,7 @@ let to_itinerary itinerary =
 
 let get_itinerary id =
   Db.view_one (<:view< t | t in $itineraries_table$; t.id = $int32:id$ >>)
-  >>= to_itinerary
+  >>= to_itinerary >>= fun s -> Lwt.return(Some(s))
 
 let create_coord coord =
   Db.value (<:value< $coords_table$?id >>) >>= fun id ->

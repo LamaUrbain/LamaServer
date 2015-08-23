@@ -1,7 +1,14 @@
 module D = Db.Db(Db_macaque)
 open Request_data
 
+type ('a, 'b) error = Error of 'a | Answer of 'b
+
 let (>>=) = Lwt.(>>=)
+
+let (|>>) v f = v >>= fun value ->
+  match value with
+  | Some value -> f value
+  | None -> Lwt.fail_with "Error while unwrapping"
 
 let json_mime_type = "application/json"
 
@@ -124,6 +131,27 @@ let sessions_delete_handler token _ =
      >>= fun s -> send_success ~content:"" ()
     ) (`Ok ())
 
+    let check_itinerary_ownership itinerary token =
+    D.get_itinerary itinerary >>= fun i ->
+    match i with
+    | Some itinerary ->
+    begin
+      if BatOption.default false itinerary.favorite then
+      (
+        match token with
+        | Some t -> (
+          D.find_session t >>= fun s ->
+          match s with
+          | Some session -> if BatOption.is_none @@ BatOption.map ((=) session.owner) itinerary.owner
+          then Lwt.return(Answer(itinerary))
+        else Lwt.return(Error("User not allowed to edit this itinerary"))
+        | None -> Lwt.return(Error("Invalid Session"))
+      )
+        | None -> Lwt.return(Error("No token provided"))
+      )
+    else Lwt.return(Answer(itinerary))
+  end
+  | None -> Lwt.return(Error("Itinerary not found"))
 
 open Eliom_parameter
 
@@ -135,7 +163,6 @@ let coord_of_param loc =
     let (lat, long) = float_of_string (List.nth latlong 0), float_of_string (List.nth latlong 1) in
     {latitude = lat; longitude = long; address = None}
 
-
 let () =
 
   let dummy_handler _ _ = Eliom_registration.String.send ~code:201 ("", "") in
@@ -146,7 +173,7 @@ let () =
     let coords : Request_data.itinerary_creation = {destination; departure; favorite; name} in
       wrap_errors
         (fun coords ->
-         Itinerary.create coords >>= fun itinerary ->
+         Itinerary.create coords |>> fun itinerary ->
          send_json
            ~code:200
            (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
@@ -159,17 +186,22 @@ let () =
     send_json ~code:200 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
   in
 
-  let itinerary_put_handler (id, (departure, (favorite, name))) _ =
-    let departure = BatOption.map coord_of_param departure in
-    let coords : Request_data.itinerary_edition = {departure; favorite; name} in
-    wrap_errors
+  let itinerary_put_handler (id, (departure, (favorite, (name, token)))) _ =
+    check_itinerary_ownership id token >>= fun it ->
+    match it with
+    | Answer _ -> (
+      let departure = BatOption.map coord_of_param departure in
+      let coords : Request_data.itinerary_edition = {departure; favorite; name} in
+      wrap_errors
       (fun coords ->
-         Itinerary.edit coords id >>= fun itinerary ->
-         send_json
-           ~code:200
-           (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
+       Itinerary.edit coords id >>= fun itinerary ->
+       send_json
+       ~code:200
+       (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
       )
       (`Ok coords)
+    )
+    | Error e -> send_error ~code:403 e
   in
 
   let destinations_post_handler (id, ()) (destination, position) =
@@ -284,6 +316,7 @@ let () =
                      (opt (string "departure")
                       ** opt (bool "favorite")
                       ** opt (string "name")
+                      ** opt (string "token")
                      )
                   )
       ()

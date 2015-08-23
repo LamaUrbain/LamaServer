@@ -198,20 +198,28 @@ let recache_itineraries itinerary =
 
 let get_coordinates ~zoom id =
   let magnification = Cpp.get_magnification (Unsigned.UInt32.of_int zoom) in
-  Db.get_itinerary id >>= fun itinerary ->
-  let set = Hashtbl.create 512 in
-  waypoints_iter
-    (fun path ->
-       let itinerary = ItineraryCache.find path in
-       let aux x y = Hashtbl.replace set (x, y) () in
-       Cpp.iter_coordinates itinerary magnification aux;
-    )
-    (itinerary.Result_data.departure :: itinerary.Result_data.destinations);
+  Db.get_itinerary id >>= fun it ->
+  match it with
+  | Some itinerary -> (
+    let set = Hashtbl.create 512 in
+    waypoints_iter
+      (fun path ->
+         let itinerary = ItineraryCache.find path in
+         let aux x y = Hashtbl.replace set (x, y) () in
+        Cpp.iter_coordinates itinerary magnification aux;
+      )
+      (itinerary.Result_data.departure :: itinerary.Result_data.destinations);
   let to_int = Unsigned.Size_t.to_int in
-  Lwt.return (Hashtbl.fold (fun (x, y) () acc -> {x = to_int x; y = to_int y} :: acc) set [])
+  Lwt.return (Hashtbl.fold (fun (x, y) () acc -> {x = to_int x; y = to_int y} :: acc) set []))
+  | None -> Lwt.fail_with "Lol"
+
+let get id = Db.get_itinerary id >>= fun i ->
+  match i with
+  | Some i -> Lwt.return i
+  | None -> Lwt.fail_with "Itinerary not found"
 
 let get_image ~x ~y ~z id =
-  Db.get_itinerary id >>= fun itinerary ->
+  get id >>= fun itinerary ->
   let map_data = Cpp.create_map_data () in
   waypoints_iter
     (fun path ->
@@ -280,10 +288,9 @@ let get_all {Request_data.search; owner; favorite; ordering} =
   in
   Lwt.return itineraries
 
-let get = Db.get_itinerary
 
 let edit {Request_data.name; departure; favorite} id =
-  Db.get_itinerary id >>= fun itinerary ->
+  get id >>= fun itinerary ->
   let itinerary = match name with
     | None -> itinerary
     | Some name -> {itinerary with Result_data.name = Some name} (* TODO *)
@@ -306,7 +313,7 @@ let edit {Request_data.name; departure; favorite} id =
   Lwt.return itinerary
 
 let add_destination {Request_data.destination; position} id =
-  Db.get_itinerary id >>= fun itinerary ->
+  get id >>= fun itinerary ->
   let destinations = match position with
     | Some position -> Utils.list_insert position destination itinerary.Result_data.destinations
     | None -> itinerary.Result_data.destinations @ [destination]
@@ -317,7 +324,7 @@ let add_destination {Request_data.destination; position} id =
   Lwt.return itinerary
 
 let edit_destination {Request_data.Destination_edition.destination; position} ~initial_position id =
-  Db.get_itinerary id >>= fun itinerary ->
+  get id >>= fun itinerary ->
   let destinations = match position with
     | Some position ->
         begin match destination with
@@ -337,7 +344,7 @@ let edit_destination {Request_data.Destination_edition.destination; position} ~i
   Lwt.return itinerary
 
 let delete_destination ~position id =
-  Db.get_itinerary id >>= fun itinerary ->
+  get id >>= fun itinerary ->
   let destinations = List.remove_at position itinerary.Result_data.destinations in
   let itinerary = {itinerary with Result_data.destinations} in
   recache_itineraries itinerary;
