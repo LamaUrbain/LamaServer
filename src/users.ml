@@ -5,3 +5,5 @@ type t =
     created : string;
     id : int;
   } [@@deriving yojson]
+
+type users = t list [@@deriving yojson]

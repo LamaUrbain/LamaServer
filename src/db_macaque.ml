@@ -62,6 +62,17 @@ let to_user =
   in
   Option.map f
 
+let to_user_unwrapped x =
+  let open Users in
+  Lwt.return
+  {
+    username = x#!username;
+    password = x#!password;
+    email = x#!email;
+    created = string_of_calendar x#!created;
+    id = Int32.to_int x#!id;
+  }
+
 let find_user id =
   let id = Int32.of_int id in
   Db.view_opt
@@ -92,6 +103,14 @@ let find_user_username username =
 let delete_user id =
   Db.query
     (<:delete< _user in $users_table$ | _user.username = $string:id$ >>)
+
+let get_all_users () =
+  Db.view (<:view< t | t in $users_table$ >>)
+  >>= Lwt_list.map_s to_user_unwrapped
+
+let search_user pattern = 
+  Db.view(<:view< t | t in $users_table$; t.username = $string:pattern$ >>)
+  >>= Lwt_list.map_s to_user_unwrapped
 
 let gen_str length =
   let gen() = match Random.int(26+26+10) with
