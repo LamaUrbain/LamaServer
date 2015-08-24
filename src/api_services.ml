@@ -31,10 +31,24 @@ let read_raw_content ?(length = 4096) raw_content =
   let content_stream = Ocsigen_stream.get raw_content in
   Ocsigen_stream.string_of_stream length content_stream
 
-let user_get_handler id_opt () =
+let user_get_handler (id_opt, search_pattern) () =
   match id_opt with
   | None ->
-    send_error ~code:404 "Missing id"
+     begin
+       match search_pattern with
+       | None ->
+	  D.get_all_users ()
+	  >>= fun users ->
+	  send_json
+	    ~code:200
+	    (Yojson.Safe.to_string (Users.users_to_yojson users)) 
+       | Some pattern ->
+	    D.search_user pattern
+	    >>= fun users ->
+	    send_json
+	      ~code:200
+	      (Yojson.Safe.to_string (Users.users_to_yojson users))
+     end
   | Some id ->
     (
       D.find_user id
@@ -204,7 +218,10 @@ let () =
     | Error e -> send_error ~code:403 e
   in
 
-  let destinations_post_handler (id, ()) (destination, position) =
+  let destinations_post_handler (id, ()) (destination, (position, token)) =
+    check_itinerary_ownership id token >>= fun it ->
+    match it with
+    | Answer _ -> (
     let destination = coord_of_param destination in
     let request = {destination; position} in
     wrap_errors
@@ -214,9 +231,15 @@ let () =
          ~code:200
          (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
       )
-      (`Ok request) in
+      (`Ok request)
+      )
+    | Error e -> send_error ~code:403 e
+  in
 
-  let destinations_put_handler ((id, ((), pos)), (destination, position)) _ =
+  let destinations_put_handler ((id, ((), pos)), (destination, (position, token))) _ =
+    check_itinerary_ownership id token >>= fun it ->
+    match it with
+    | Answer _ -> (
     let edit : Request_data.Destination_edition.t =
       {destination = BatOption.map coord_of_param destination; position}
     in
@@ -228,6 +251,8 @@ let () =
          (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
     )
     (`Ok edit)
+  )
+    | Error e -> send_error ~code:403 e
   in
 
   let delete_handler get delete =
@@ -335,7 +360,9 @@ let () =
     Eliom_service.Http.post_service
       ~fallback:service
       ~post_params:(string "destination"
-                    ** opt (int "position"))
+                    ** opt (int "position")
+                    ** opt (string "token")
+                  )
      ()
   in
   Eliom_registration.Any.register ~service destinations_post_handler;
@@ -344,7 +371,7 @@ let () =
       ~path:["itineraries"]
       ~get_params:(suffix_prod
                      (int32 "id" ** suffix_const "destinations" ** int "pos")
-                     (opt (string "destination") ** opt (int "position"))
+                     (opt (string "destination") ** opt (int "position") ** opt (string "token"))
                   )
       ()
   in
@@ -377,7 +404,7 @@ let () =
   let service =
     Eliom_service.Http.service
       ~path:["users"]
-      ~get_params:(suffix (neopt (int "id")))
+      ~get_params:(suffix_prod (neopt (int "id")) (opt (string "search")))
       () in
   Eliom_registration.Any.register ~service user_get_handler;
 
