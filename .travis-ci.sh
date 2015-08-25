@@ -37,7 +37,7 @@ make run &
 sleep 10
 curl http://localhost:8080/users/0 -o check
 check=`cat check`
-if [[ ! $check =~ "User not found" ]]; then
+if [[ ! $check =~ "[]" ]]; then
     exit 1
 fi
 killall ocsigenserver
