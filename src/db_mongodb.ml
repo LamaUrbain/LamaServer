@@ -25,6 +25,7 @@ let create_user ~username ~password ~email =
         password;
         email;
         created = "";
+	sponsor = false;
         id=0;
       }
   with
@@ -42,8 +43,9 @@ let find_user id =
       let password = Bson.get_element "password" doc |> Bson.get_string in
       let email = Bson.get_element "email" doc |> Bson.get_string in
       let created = "" in
+      let sponsor = Bson.get_element "sponsor" doc |> Bson.get_boolean in
       let open Users in
-      Lwt.return (Some {username; password; email;id; created})
+      Lwt.return (Some {username; password; email;id; sponsor; created})
 
 let find_user_username username =
   empty
@@ -58,6 +60,7 @@ let find_user_username username =
          Users.{
            username;
            password = Bson.get_element "password" doc |> Bson.get_string;
+           sponsor = Bson.get_element "sponsor" doc |> Bson.get_boolean;
            email = Bson.get_element "email" doc |> Bson.get_string;
            id = Bson.get_element "id" doc |> Bson.get_int32 |> Int32.to_int;
            created = "";

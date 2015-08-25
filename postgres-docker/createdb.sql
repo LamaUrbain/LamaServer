@@ -26,6 +26,7 @@ CREATE TABLE users_table (
   password text NOT NULL,
   email dom_mail NOT NULL,
   id integer PRIMARY KEY,
+  sponsor boolean NOT NULL,
   created timestamp NOT NULL default CURRENT_timestamp,
   UNIQUE(username)
 );

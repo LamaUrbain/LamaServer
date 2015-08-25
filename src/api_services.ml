@@ -31,9 +31,9 @@ let read_raw_content ?(length = 4096) raw_content =
   let content_stream = Ocsigen_stream.get raw_content in
   Ocsigen_stream.string_of_stream length content_stream
 
-let user_get_handler (id_opt, search_pattern) () =
-  match id_opt with
-  | None ->
+let user_get_handler (id_opt, (search_pattern, sponsored)) () =
+  match id_opt, sponsored with
+  | None, None ->
      begin
        match search_pattern with
        | None ->
@@ -49,7 +49,13 @@ let user_get_handler (id_opt, search_pattern) () =
 	      ~code:200
 	      (Yojson.Safe.to_string (Users.users_to_yojson users))
      end
-  | Some id ->
+  | _, Some is_sponsor ->
+     D.get_sponsored_users is_sponsor
+     >>= fun users ->
+     send_json
+       ~code:200
+       (Yojson.Safe.to_string (Users.users_to_yojson users))
+  | Some id, _ ->
     (
       D.find_user id
       >>= function
@@ -404,7 +410,7 @@ let () =
   let service =
     Eliom_service.Http.service
       ~path:["users"]
-      ~get_params:(suffix_prod (neopt (int "id")) (opt (string "search")))
+      ~get_params:(suffix_prod (neopt (int "id")) (opt (string "search") ** opt (bool "sponsored")))
       () in
   Eliom_registration.Any.register ~service user_get_handler;
 

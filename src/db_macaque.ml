@@ -17,6 +17,7 @@ let users_table =
     username text NOT NULL,
     password text NOT NULL,
     email text NOT NULL,
+    sponsor boolean NOT NULL,
     created timestamp NOT NULL DEFAULT(localtimestamp ()),
     id integer NOT NULL DEFAULT(nextval $users_id_seq$)
    ) >>)
@@ -28,6 +29,7 @@ let auth_table = (<:table< auth_table (
   ) >>)
 
 let create_user ~username ~password ~email =
+  let sponsor = false in
   Db.value (<:value< $users_table$?id >>)
   >>= fun id ->
     Db.query
@@ -37,6 +39,7 @@ let create_user ~username ~password ~email =
                  password = $string:password$;
                  email = $string:email$;
                  created = $users_table$?created;
+                 sponsor = $bool:sponsor$;
                  id = $int32:id$;
                  } >>
   >>= fun _ ->
@@ -46,6 +49,7 @@ let create_user ~username ~password ~email =
         password;
         email;
         created = "";
+	sponsor = false;
         id = Int32.to_int id;
       })
 
@@ -55,6 +59,7 @@ let to_user =
     {
     username = x#!username;
     password = x#!password;
+    sponsor = x#!sponsor;
     email = x#!email;
     created = string_of_calendar x#!created;
     id = Int32.to_int x#!id;
@@ -68,6 +73,7 @@ let to_user_unwrapped x =
   {
     username = x#!username;
     password = x#!password;
+    sponsor = x#!sponsor;
     email = x#!email;
     created = string_of_calendar x#!created;
     id = Int32.to_int x#!id;
@@ -81,6 +87,7 @@ let find_user id =
             password = user_.password;
             email = user_.email;
             created = user_.created;
+            sponsor = user_.sponsor;
             id = user_.id;
             } |
             user_ in $users_table$;
@@ -94,6 +101,7 @@ let find_user_username username =
             password = user_.password;
             email = user_.email;
             created = user_.created;
+            sponsor = user_.sponsor;
             id = user_.id;
             } |
             user_ in $users_table$;
@@ -110,6 +118,10 @@ let get_all_users () =
 
 let search_user pattern = 
   Db.view(<:view< t | t in $users_table$; t.username = $string:pattern$ >>)
+  >>= Lwt_list.map_s to_user_unwrapped
+
+let get_sponsored_users sponsor =
+  Db.view(<:view< t | t in $users_table$; t.sponsor = $bool:sponsor$ >>)
   >>= Lwt_list.map_s to_user_unwrapped
 
 let gen_str length =

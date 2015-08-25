@@ -3,6 +3,7 @@ type t =
     password : string;
     email : string;
     created : string;
+    sponsor : bool;
     id : int;
   } [@@deriving yojson]
 
