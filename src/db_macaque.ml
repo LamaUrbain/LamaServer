@@ -28,8 +28,7 @@ let auth_table = (<:table< auth_table (
   created timestamp NOT NULL DEFAULT(localtimestamp ())
   ) >>)
 
-let create_user ~username ~password ~email =
-  let sponsor = false in
+let create_user ~username ~password ~email ?sponsor:(sponsor=false) =
   Db.value (<:value< $users_table$?id >>)
   >>= fun id ->
     Db.query
