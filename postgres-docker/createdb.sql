@@ -44,8 +44,8 @@ ALTER TABLE auth_table OWNER TO lamaurbain;
 
 CREATE TABLE coords_table (
   id integer PRIMARY KEY,
-  latitude real NOT NULL,
-  longitude real NOT NULL,
+  latitude double precision NOT NULL,
+  longitude double precision NOT NULL,
   address text
 );
 ALTER TABLE coords_table OWNER TO lamaurbain;

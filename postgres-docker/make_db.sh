@@ -2,12 +2,14 @@
 echo "******CREATING DOCKER DATABASE******"
 
 echo "starting postgres"
-gosu postgres pg_ctl -w start
+#gosu postgres pg_ctl -w start
 
-gosu postgres psql -h localhost -p 5432 -U postgres -a -f /db/createdb.sql
+export PGUSER=postgres
+psql -f /db/createdb.sql
+#gosu postgres psql -h localhost -p 5432 -U postgres -a -f /db/createdb.sql
 
 echo "stopping postgres"
-gosu postgres pg_ctl stop
+#gosu postgres pg_ctl stop
 
 echo "stopped postgres"
 
