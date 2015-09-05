@@ -55,13 +55,25 @@ static void GetCarSpeedTable(std::map<std::string,double>& map)
 
 static const double DPI=96.0;
 
-static osmscout::Vehicle g_vehicle = osmscout::vehicleCar;
-static osmscout::RoutingServiceRef g_router = NULL;
-static osmscout::StyleConfigRef g_styleConfig = NULL;
-static osmscout::FastestPathRoutingProfileRef g_routingProfile = NULL;
+static const char* g_map = NULL;
+static const char* g_style = NULL;
 
 extern "C"
 bool init(const char* map, const char* style) {
+    g_map = strdup(map);
+    g_style = strdup(style);
+    return true;
+}
+
+extern "C"
+struct Point* createPoint(float lat, float lon) {
+    osmscout::ObjectFileRef object;
+    size_t nodeIndex;
+    auto result = new Point;
+
+    osmscout::Vehicle g_vehicle = osmscout::vehicleCar;
+    osmscout::RoutingServiceRef g_router = NULL;
+
     bool outputGPX = false;
     osmscout::DatabaseParameter databaseParameter;
     osmscout::DatabaseRef database(new osmscout::Database(databaseParameter));
@@ -69,9 +81,9 @@ bool init(const char* map, const char* style) {
     osmscout::RouteDescription description;
     std::map<std::string, double> carSpeedTable;
 
-    if (!database->Open(map)) {
+    if (!database->Open(g_map)) {
         std::cerr << "Cannot open database" << std::endl;
-        return false;
+        return NULL;
     }
 
     auto routingProfile = new osmscout::FastestPathRoutingProfile(database->GetTypeConfig());
@@ -85,7 +97,7 @@ bool init(const char* map, const char* style) {
 
     if (!router->Open()) {
         std::cerr << "Cannot open routing database" << std::endl;
-        return false;
+        return NULL;
     }
 
     switch (g_vehicle) {
@@ -101,25 +113,9 @@ bool init(const char* map, const char* style) {
         break;
     }
 
-    auto styleConfig = new osmscout::StyleConfig(database->GetTypeConfig());
-
-    if (!styleConfig->Load(style)) {
-        std::cerr << "Cannot open style" << std::endl;
-        return false;
-    }
-
-    g_styleConfig = osmscout::StyleConfigRef(styleConfig);
     g_router = osmscout::RoutingServiceRef(router);
-    g_routingProfile = osmscout::FastestPathRoutingProfileRef(routingProfile);
-    return true;
-}
-// router->Close();
 
-extern "C"
-struct Point* createPoint(float lat, float lon) {
-    osmscout::ObjectFileRef object;
-    size_t nodeIndex;
-    auto result = new Point;
+
 
     if (!g_router->GetClosestRoutableNode(lat, lon, g_vehicle, 1000, object, nodeIndex)) {
         std::cerr << "Error while searching for routing node near location !" << std::endl;
@@ -138,6 +134,57 @@ struct Point* createPoint(float lat, float lon) {
 
 extern "C"
 struct Itinerary* createItinerary(const struct Point* start, const struct Point* target) {
+    osmscout::Vehicle g_vehicle = osmscout::vehicleCar;
+    osmscout::RoutingServiceRef g_router = NULL;
+    osmscout::FastestPathRoutingProfileRef g_routingProfile = NULL;
+
+    bool outputGPX = false;
+    osmscout::DatabaseParameter databaseParameter;
+    osmscout::DatabaseRef database(new osmscout::Database(databaseParameter));
+    osmscout::RouterParameter routerParameter;
+    osmscout::RouteDescription description;
+    std::map<std::string, double> carSpeedTable;
+
+    if (!database->Open(g_map)) {
+        std::cerr << "Cannot open database" << std::endl;
+        return NULL;
+    }
+
+    auto routingProfile = new osmscout::FastestPathRoutingProfile(database->GetTypeConfig());
+    osmscout::TypeConfigRef typeConfig = database->GetTypeConfig();
+
+    if (!outputGPX) {
+        routerParameter.SetDebugPerformance(true);
+    }
+
+    auto router = new osmscout::RoutingService(database, routerParameter, g_vehicle);
+
+    if (!router->Open()) {
+        std::cerr << "Cannot open routing database" << std::endl;
+        return NULL;
+    }
+
+    switch (g_vehicle) {
+    case osmscout::vehicleFoot:
+        routingProfile->ParametrizeForFoot(*typeConfig, 5.0);
+        break;
+    case osmscout::vehicleBicycle:
+        routingProfile->ParametrizeForBicycle(*typeConfig, 20.0);
+        break;
+    case osmscout::vehicleCar:
+        GetCarSpeedTable(carSpeedTable);
+        routingProfile->ParametrizeForCar(*typeConfig, carSpeedTable, 160.0);
+        break;
+    }
+
+    g_router = osmscout::RoutingServiceRef(router);
+    g_routingProfile = osmscout::FastestPathRoutingProfileRef(routingProfile);
+
+
+
+    std::cerr << start << std::endl;
+    std::cerr << target << std::endl;
+
     auto way = new osmscout::Way;
     auto result = new Itinerary;
     osmscout::RouteData data;
@@ -200,6 +247,22 @@ bool paint(size_t x, size_t y,
            const osmscout::MapData* data,
            const osmscout::Magnification* magnification,
            cairo_t* cairo) {
+    osmscout::DatabaseParameter databaseParameter;
+    osmscout::DatabaseRef database(new osmscout::Database(databaseParameter));
+
+    if (!database->Open(g_map)) {
+        std::cerr << "Cannot open database" << std::endl;
+        return NULL;
+    }
+
+    osmscout::StyleConfigRef g_styleConfig = osmscout::StyleConfigRef(new osmscout::StyleConfig(database->GetTypeConfig()));
+
+    if (!g_styleConfig->Load(g_style)) {
+        std::cerr << "Cannot open style" << std::endl;
+        return NULL;
+    }
+
+
     osmscout::TileProjection projection;
     osmscout::MapParameter drawParameter;
     Painter painter(g_styleConfig);
