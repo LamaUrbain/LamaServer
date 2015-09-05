@@ -1,7 +1,7 @@
 module D = Db.Db(Db_macaque)
 open Request_data
 open BatteriesExceptionless
-       
+
 type ('a, 'b) error = Error of 'a | Answer of 'b
 
 let (>>=) = Lwt.(>>=)
@@ -42,7 +42,7 @@ let user_get_handler (id_opt, (search_pattern, sponsored)) () =
 	  >>= fun users ->
 	  send_json
 	    ~code:200
-	    (Yojson.Safe.to_string (Users.users_to_yojson users)) 
+	    (Yojson.Safe.to_string (Users.users_to_yojson users))
        | Some pattern ->
 	    D.search_user pattern
 	    >>= fun users ->
@@ -71,10 +71,10 @@ let user_get_handler (id_opt, (search_pattern, sponsored)) () =
     )
 
 let get_token_user t =
-  Option.map_default 
+  Option.map_default
     (fun token ->D.find_session token >>= (fun s -> Lwt.return @@ Option.map (fun x -> x.Sessions.owner) s))
     (Lwt.return None) t
-  
+
 let wrap_body_json f get (content_type, raw_content_opt) =
   if not (check_content_type ~mime_type:json_mime_type content_type) then
     send_error ~code:400 "Content-type is wrong, it must be JSON"
@@ -201,7 +201,7 @@ let () =
       wrap_errors
         (fun coords ->
 	 get_token_user token >>= (fun owner ->
-         Itinerary.create coords ~owner |>> fun itinerary ->
+         Itinerary.create coords ?owner |>> fun itinerary ->
          send_json
            ~code:200
            (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
