@@ -11,7 +11,7 @@ module Zoomlevel : sig
   val create : int -> t
 end
 
-val create : ?owner:string option -> Request_data.itinerary_creation -> Result_data.itinerary option Lwt.t
+val create : ?owner:string -> Request_data.itinerary_creation -> Result_data.itinerary option Lwt.t
 
 val get_coordinates : zoom:Zoomlevel.t -> t -> coordinate_list Lwt.t
 
