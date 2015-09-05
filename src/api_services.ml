@@ -1,6 +1,7 @@
 module D = Db.Db(Db_macaque)
 open Request_data
-
+open BatteriesExceptionless
+       
 type ('a, 'b) error = Error of 'a | Answer of 'b
 
 let (>>=) = Lwt.(>>=)
@@ -69,6 +70,11 @@ let user_get_handler (id_opt, (search_pattern, sponsored)) () =
           ("User not found")
     )
 
+let get_token_user t =
+  Option.map_default 
+    (fun token ->D.find_session token >>= (fun s -> Lwt.return @@ Option.map (fun x -> x.Sessions.owner) s))
+    (Lwt.return None) t
+  
 let wrap_body_json f get (content_type, raw_content_opt) =
   if not (check_content_type ~mime_type:json_mime_type content_type) then
     send_error ~code:400 "Content-type is wrong, it must be JSON"
@@ -188,17 +194,18 @@ let () =
 
   let dummy_handler _ _ = Eliom_registration.String.send ~code:201 ("", "") in
 
-  let itinerary_post_handler _ (departure, (favorite, (destination, name))) =
+  let itinerary_post_handler _ (departure, (favorite, (destination, (name, token)))) =
     let destination = BatOption.map coord_of_param destination in
     let departure = coord_of_param departure in
     let coords : Request_data.itinerary_creation = {destination; departure; favorite; name} in
       wrap_errors
         (fun coords ->
-         Itinerary.create coords |>> fun itinerary ->
+	 get_token_user token >>= (fun owner ->
+         Itinerary.create coords ~owner |>> fun itinerary ->
          send_json
            ~code:200
            (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
-        )
+        ))
     (`Ok coords)
   in
 
@@ -335,7 +342,9 @@ let () =
       ~post_params:(string "departure"
                     ** opt (bool "favorite")
                     ** opt (string "destination")
-                    ** opt (string "name"))
+                    ** opt (string "name")
+                    ** opt (string "token")
+		   )
      ()
   in
   Eliom_registration.Any.register ~service itinerary_post_handler;

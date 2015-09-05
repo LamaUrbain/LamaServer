@@ -171,7 +171,7 @@ let () =
   if not (Cpp.init map style) then
     failwith "DB init failed"
 
-let create {Request_data.name; departure; destination; favorite} =
+let create ?owner:(owner=None) {Request_data.name; departure; destination; favorite} =
   let destinations = match destination with
     | Some destination ->
         ItineraryCache.add (departure, destination);
