@@ -58,8 +58,6 @@ static const double DPI=96.0;
 static osmscout::DatabaseRef g_database;
 static osmscout::StyleConfigRef g_styleConfig;
 static osmscout::Vehicle g_vehicle = osmscout::vehicleCar;
-static osmscout::RoutingServiceRef g_router;
-static osmscout::FastestPathRoutingProfileRef g_routingProfile;
 
 extern "C"
 bool init(char* map, char* style) {
@@ -81,39 +79,47 @@ bool init(char* map, char* style) {
         return false;
     }
 
-    // Router
+    return true;
+}
+
+static osmscout::RoutingServiceRef getRouter() {
     bool outputGPX = false;
-    osmscout::TypeConfigRef typeConfig = g_database->GetTypeConfig();
     osmscout::RouterParameter routerParameter;
 
     if (!outputGPX) {
         routerParameter.SetDebugPerformance(true);
     }
 
-    g_router = osmscout::RoutingServiceRef(new osmscout::RoutingService(g_database, routerParameter, g_vehicle));
-    g_routingProfile = osmscout::FastestPathRoutingProfileRef(new osmscout::FastestPathRoutingProfile(typeConfig));
+    osmscout::RoutingServiceRef router(new osmscout::RoutingService(g_database, routerParameter, g_vehicle));
 
-    if (!g_router->Open()) {
+    if (!router->Open()) {
         std::cerr << "Cannot open routing database" << std::endl;
-        return false;
+        return NULL;
     }
+
+    return router;
+}
+
+static osmscout::FastestPathRoutingProfileRef getRoutingProfile() {
+    osmscout::TypeConfigRef typeConfig = g_database->GetTypeConfig();
+    osmscout::FastestPathRoutingProfileRef routingProfile(new osmscout::FastestPathRoutingProfile(typeConfig));
 
     switch (g_vehicle) {
     case osmscout::vehicleFoot:
-        g_routingProfile->ParametrizeForFoot(*typeConfig, 5.0);
+        routingProfile->ParametrizeForFoot(*typeConfig, 5.0);
         break;
     case osmscout::vehicleBicycle:
-        g_routingProfile->ParametrizeForBicycle(*typeConfig, 20.0);
+        routingProfile->ParametrizeForBicycle(*typeConfig, 20.0);
         break;
     case osmscout::vehicleCar:
         std::map<std::string, double> carSpeedTable;
 
         GetCarSpeedTable(carSpeedTable);
-        g_routingProfile->ParametrizeForCar(*typeConfig, carSpeedTable, 160.0);
+        routingProfile->ParametrizeForCar(*typeConfig, carSpeedTable, 160.0);
         break;
     }
 
-    return true;
+    return routingProfile;
 }
 
 extern "C"
@@ -122,7 +128,13 @@ struct Point* createPoint(float lat, float lon) {
     size_t nodeIndex;
     auto result = new Point;
 
-    if (!g_router->GetClosestRoutableNode(lat, lon, g_vehicle, 1000, object, nodeIndex)) {
+    auto router = getRouter();
+
+    if (router == NULL) {
+        return NULL;
+    }
+
+    if (!router->GetClosestRoutableNode(lat, lon, g_vehicle, 1000, object, nodeIndex)) {
         std::cerr << "Error while searching for routing node near location !" << std::endl;
         return NULL;
     }
@@ -146,7 +158,15 @@ struct Itinerary* createItinerary(const struct Point* start, const struct Point*
     auto result = new Itinerary;
     osmscout::RouteData data;
 
-    if (!g_router->CalculateRoute(*g_routingProfile, start->object, start->nodeIndex, target->object, target->nodeIndex, data)) {
+    auto router = getRouter();
+
+    if (router == NULL) {
+        return NULL;
+    }
+
+    auto routingProfile = getRoutingProfile();
+
+    if (!router->CalculateRoute(*routingProfile, start->object, start->nodeIndex, target->object, target->nodeIndex, data)) {
         std::cerr << "There was an error while calculating the route!" << std::endl;
         return NULL;
     }
@@ -156,7 +176,7 @@ struct Itinerary* createItinerary(const struct Point* start, const struct Point*
         return NULL;
     }
 
-    if (!g_router->TransformRouteDataToWay(data, *way)) {
+    if (!router->TransformRouteDataToWay(data, *way)) {
         std::cerr << "Cannot transform route date to way" << std::endl;
         return NULL;
     }
