@@ -244,7 +244,7 @@ let get_all {Request_data.search; owner; favorite; ordering} =
   let itineraries = match search with
     | Some search ->
         List.filter
-          (fun x -> Option.map_default (String.equal search) true x.Result_data.name)
+          (fun x -> Option.map_default (String.equal search) false x.Result_data.name)
           itineraries
     | None ->
         itineraries
@@ -252,7 +252,7 @@ let get_all {Request_data.search; owner; favorite; ordering} =
   let itineraries = match owner with
     | Some owner ->
         List.filter
-          (fun x -> Option.map_default (String.equal owner) true x.Result_data.owner)
+          (fun x -> Option.map_default (String.equal owner) false x.Result_data.owner)
           itineraries
     | None ->
         itineraries
@@ -260,7 +260,7 @@ let get_all {Request_data.search; owner; favorite; ordering} =
   let itineraries = match favorite with
     | Some favorite ->
         List.filter
-          (fun x -> Option.map_default (Bool.equal favorite) true x.Result_data.favorite)
+          (fun x -> Option.map_default (Bool.equal favorite) false x.Result_data.favorite)
           itineraries
     | None ->
         itineraries
