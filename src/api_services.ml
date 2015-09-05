@@ -269,7 +269,7 @@ let () =
     | Error e -> send_error ~code:403 e
   in
 
-  let delete_handler get delete =
+  let delete_handler (get, token) delete  =
     match get with
     | [id; "destinations"; position] ->
         let id = Int32.of_string id in
@@ -312,7 +312,7 @@ let () =
   let service =
     Eliom_service.Http.delete_service
       ~path:["itineraries"]
-      ~get_params:(suffix (all_suffix "params"))
+      ~get_params:(suffix_prod (all_suffix "params") (opt (string "token")))
       ()
   in
   Eliom_registration.Any.register ~service delete_handler;
