@@ -46,8 +46,8 @@ module Cpp : sig
   type itinerary
 
   val init : string -> string -> bool
-  val create_point : float -> float -> point
-  val create : point -> point -> itinerary
+  val create_point : float -> float -> point option
+  val create : point -> point -> itinerary option
   val get_magnification : Unsigned.UInt32.t -> magnification
   val iter_coordinates : itinerary -> magnification -> (Unsigned.Size_t.t -> Unsigned.Size_t.t -> unit) -> unit
   val create_map_data : unit -> map_data
@@ -66,10 +66,10 @@ end = struct
     foreign "init" (string @-> string @-> returning bool)
 
   let create_point =
-    foreign "createPoint" (float @-> float @-> returning (ptr void))
+    foreign "createPoint" (float @-> float @-> returning (ptr_opt void))
 
   let create =
-    foreign "createItinerary" (ptr void @-> ptr void @-> returning (ptr void))
+    foreign "createItinerary" (ptr void @-> ptr void @-> returning (ptr_opt void))
 
   let get_magnification =
     foreign "getMagnification" (uint32_t @-> returning (ptr void))
@@ -127,7 +127,11 @@ end = struct
     | exception Not_found ->
         let latitude = k.Request_data.latitude in
         let longitude = k.Request_data.longitude in
-        let point = Cpp.create_point latitude longitude in
+        let point =
+          Option.default_delayed
+            (fun () -> assert false)
+            (Cpp.create_point latitude longitude)
+        in
         H.add self k point;
         point
 end
@@ -159,7 +163,11 @@ end = struct
     | exception Not_found ->
         let departure_point = PointCache.find departure in
         let destination_point = PointCache.find destination in
-        let itinerary = Cpp.create departure_point destination_point in
+        let itinerary =
+          Option.default_delayed
+            (fun () -> assert false)
+            (Cpp.create departure_point destination_point)
+        in
         H.add self path itinerary;
         itinerary
 
@@ -287,7 +295,6 @@ let get_all {Request_data.search; owner; favorite; ordering} =
         itineraries
   in
   Lwt.return itineraries
-
 
 let edit {Request_data.name; departure; favorite} id =
   get id >>= fun itinerary ->
