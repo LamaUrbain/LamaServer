@@ -1,8 +1,11 @@
-val create_user : username:string -> password:string -> email:string -> Users.t Lwt.t
+val create_user : username:string -> password:string -> email:string -> sponsor:bool -> Users.t Lwt.t
 val find_user : int -> Users.t option Lwt.t
 
 val find_user_username : string -> Users.t option Lwt.t
 val delete_user : string -> unit Lwt.t
+val get_all_users : unit -> Users.t list Lwt.t
+val get_sponsored_users : bool -> Users.t list Lwt.t
+val search_user : string -> Users.t list Lwt.t
 
 val create_session : user:Users.t -> Sessions.t Lwt.t
 val find_session : string -> Sessions.t option Lwt.t
@@ -14,7 +17,7 @@ val create_itinerary :
   favorite:bool option ->
   departure:Request_data.coord ->
   destinations:Request_data.coord list ->
-  Result_data.itinerary Lwt.t
+  Result_data.itinerary option Lwt.t
 val update_itinerary : Result_data.itinerary -> unit Lwt.t
 val delete_itinerary : int32 -> unit Lwt.t
 val get_itinerary : int32 -> Result_data.itinerary option Lwt.t

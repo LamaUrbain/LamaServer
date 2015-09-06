@@ -8,13 +8,14 @@ let mongo_addr _ =
 
 let user_collection = lazy (Mongo.create (mongo_addr ()) 27017 "lamaurbain" "users")
 
-let create_user ~username ~password ~email =
+let create_user ~username ~password ~email ~sponsor =
   try
     let doc =
       empty
       |> Bson.add_element "username" (Bson.create_string username)
       |> Bson.add_element "password" (Bson.create_string password)
       |> Bson.add_element "email" (Bson.create_string email)
+      |> Bson.add_element "sponsor" (Bson.create_boolean sponsor)
       |> Bson.add_element "id"
         (Lazy.force user_collection |> Mongo.count |> Int32.of_int |> Bson.create_int32)
     in
@@ -50,7 +51,7 @@ let find_user id =
 let find_user_username username =
   empty
   |> Bson.add_element "username" (Bson.create_string username)
-  |> Mongo.find_q_one (Lazy.force user_collection)
+  |> Mongo.find_q (Lazy.force user_collection)
   |> MongoReply.get_document_list
   |> function
   | [] -> Lwt.return None
@@ -66,6 +67,87 @@ let find_user_username username =
            created = "";
          }
       )
+
+let get_sponsored_users _ =
+  empty
+  |> Bson.add_element "sponsored" (Bson.create_boolean true)
+  |> Mongo.find_q (Lazy.force user_collection)
+  |> MongoReply.get_document_list
+  |> function
+    | [] -> Lwt.return []
+    | doc ->
+       Lwt.return
+	 (List.map
+	    (fun u ->
+		Users.{
+		 username = Bson.get_element "username" u |> Bson.get_string;
+		 password = Bson.get_element "password" u |> Bson.get_string;
+		 sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
+		 email = Bson.get_element "email" u |> Bson.get_string;
+		 id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
+		 created = "";
+	      } 
+	     ) doc)
+	 
+let search_user username =
+  empty
+  |> Bson.add_element "sponsored" (Bson.create_string username)
+  |> Mongo.find_q (Lazy.force user_collection)
+  |> MongoReply.get_document_list
+  |> function
+    | [] -> Lwt.return []
+    | doc ->
+       Lwt.return
+	 (List.map
+	    (fun u ->
+		Users.{
+		 username = Bson.get_element "username" u |> Bson.get_string;
+		 password = Bson.get_element "password" u |> Bson.get_string;
+		 sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
+		 email = Bson.get_element "email" u |> Bson.get_string;
+		 id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
+		 created = "";
+	      } 
+	    ) doc)
+let get_sponsored_users _ =
+  empty
+  |> Bson.add_element "sponsored" (Bson.create_boolean true)
+  |> Mongo.find_q (Lazy.force user_collection)
+  |> MongoReply.get_document_list
+  |> function
+    | [] -> Lwt.return []
+    | doc ->
+       Lwt.return
+	 (List.map
+	    (fun u ->
+		Users.{
+		 username = Bson.get_element "username" u |> Bson.get_string;
+		 password = Bson.get_element "password" u |> Bson.get_string;
+		 sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
+		 email = Bson.get_element "email" u |> Bson.get_string;
+		 id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
+		 created = "";
+	      } 
+	    ) doc)
+
+let get_all_users _ =
+  Mongo.find (Lazy.force user_collection)
+  |> MongoReply.get_document_list
+  |> function
+    | [] -> Lwt.return []
+    | doc ->
+       Lwt.return
+	 (List.map
+	    (fun u ->
+		Users.{
+		 username = Bson.get_element "username" u |> Bson.get_string;
+		 password = Bson.get_element "password" u |> Bson.get_string;
+		 sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
+		 email = Bson.get_element "email" u |> Bson.get_string;
+		 id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
+		 created = "";
+	      } 
+	    ) doc)
 
 let delete_user username =
   empty
@@ -208,7 +290,7 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
       departure;
       destinations;
     }
-  |> Lwt.return
+  |> (fun i -> Lwt.return (Some i))
 
 let update_itinerary itinerary =
   let open Result_data in
