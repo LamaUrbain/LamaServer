@@ -3,8 +3,8 @@ let empty = Bson.empty
 let mongo_addr _ =
   let addrinfo = List.hd @@ Unix.getaddrinfo "mongo" "" []
   in match addrinfo.ai_addr with
-     | ADDR_INET (a,i) -> Unix.string_of_inet_addr a
-     | otherwise -> assert false
+     | ADDR_INET (a, i) -> Unix.string_of_inet_addr a
+     | _ -> assert false
 
 let user_collection = lazy (Mongo.create (mongo_addr ()) 27017 "lamaurbain" "users")
 
