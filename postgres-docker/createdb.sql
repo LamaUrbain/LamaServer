@@ -55,7 +55,7 @@ ALTER SEQUENCE coords_id_seq OWNER TO lamaurbain;
 
 CREATE TABLE itineraries_table (
   id integer PRIMARY KEY,
-  owner integer,
+  owner string,
   name dom_name,
   favorite boolean,
   departure integer NOT NULL REFERENCES coords_table ON DELETE CASCADE,
