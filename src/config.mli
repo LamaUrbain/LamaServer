@@ -10,7 +10,6 @@ type mongodb =
   { host : string
   ; port : int
   ; name : string
-  ; collection : string
   }
 
 type database =
