@@ -119,7 +119,7 @@ let database =
   in
   let name =
     Option.default_delayed
-      (fun () -> Configfile.fail_missing ~tag:"database" "name")
+      (fun () -> Configfile.fail_missing ~tag:"database" "database-name")
       database_name
   in
   match typ with
