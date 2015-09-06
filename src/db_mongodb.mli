@@ -1,6 +1,5 @@
 val create_user : username:string -> password:string -> email:string -> sponsor:bool -> Users.t Lwt.t
 val find_user : int -> Users.t option Lwt.t
-
 val find_user_username : string -> Users.t option Lwt.t
 val delete_user : string -> unit Lwt.t
 val get_all_users : unit -> Users.t list Lwt.t
