@@ -5,11 +5,18 @@ end
 module Lwt_PGOCaml = PGOCaml_generic.Make(Lwt_thread)
 module Lwt_Query = Query.Make_with_Db(Lwt_thread)(Lwt_PGOCaml)
 
-let connect = Lwt_PGOCaml.connect
-    ~host:Config.host
-    ~database:Config.database
-    ~user:Config.user
-    ~password:Config.password
+let connect =
+  match Config.database with
+  | Config.Postgres {Config.host; port; database; user; password} ->
+      Lwt_PGOCaml.connect
+        ~host
+        ?port
+        ~database
+        ~user
+        ~password
+        ?unix_domain_socket_dir:None
+  | Config.MongoDB _ ->
+      (fun () -> assert false)
 
 let pool = lazy (Lwt_pool.create 16 ~validate:Lwt_PGOCaml.alive connect)
 

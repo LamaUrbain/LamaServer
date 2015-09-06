@@ -1,13 +1,39 @@
 open BatteriesExceptionless
 open Monomorphic
 
+(** Public types *)
+
+type postgres =
+  { host : string
+  ; port : int option
+  ; database : string
+  ; user : string
+  ; password : string
+  }
+
+type mongodb =
+  { host : string
+  ; port : int
+  ; name : string
+  ; collection : string
+  }
+
+type database =
+  | Postgres of postgres
+  | MongoDB of mongodb
+
+(** Internal types *)
+
 type t =
   { map : string option
   ; style : string option
-  ; host : string option
-  ; database : string option
-  ; user : string option
-  ; password : string option
+  ; database_type : string option
+  ; database_host : string option
+  ; database_name : string option
+  ; database_user : string option
+  ; database_password : string option
+  ; database_collection : string option
+  ; database_port : int option
   }
 
 let rec init_fun data = function
@@ -27,12 +53,17 @@ let rec init_fun data = function
       let data =
         List.fold_left
           (fun data -> function
-             | ("host", host) -> {data with host = Some host}
-             | ("database", database) -> {data with database = Some database}
-             | ("user", user) -> {data with user = Some user}
+             | ("type", typ) -> {data with database_type = Some typ}
+             | ("host", host) -> {data with database_host = Some host}
+             | ("database-name", name) -> {data with database_name = Some name}
+             | ("user", user) -> {data with database_user = Some user}
              | ("password-file", password_file) ->
                  let password = File.with_file_in password_file IO.read_all in
-                 {data with password = Some password}
+                 {data with database_password = Some password}
+             | ("collection", collection) ->
+                 {data with database_collection = Some collection}
+             | ("port", port) ->
+                 {data with database_port = Some (int_of_string port)}
              | (x, _) -> Configfile.fail_attrib ~tag x
           )
           data
@@ -46,14 +77,26 @@ let rec init_fun data = function
   | [] ->
       data
 
-let {map; style; host; database; user; password} =
+let { map
+    ; style
+    ; database_type
+    ; database_host
+    ; database_name
+    ; database_user
+    ; database_password
+    ; database_collection
+    ; database_port
+    } =
   let data =
     { map = None
     ; style = None
-    ; host = None
-    ; database = None
-    ; user = None
-    ; password = None
+    ; database_type = None
+    ; database_host = None
+    ; database_name = None
+    ; database_user = None
+    ; database_password = None
+    ; database_collection = None
+    ; database_port = None
     }
   in
   let c = Eliom_config.get_config () in
@@ -69,22 +112,47 @@ let style =
     (fun () -> Configfile.fail_missing ~tag:"config" "style")
     style
 
-let host =
-  Option.default_delayed
-    (fun () -> Configfile.fail_missing ~tag:"database" "host")
-    host
-
 let database =
-  Option.default_delayed
-    (fun () -> Configfile.fail_missing ~tag:"database" "database")
-    database
-
-let user =
-  Option.default_delayed
-    (fun () -> Configfile.fail_missing ~tag:"database" "user")
-    user
-
-let password =
-  Option.default_delayed
-    (fun () -> Configfile.fail_missing ~tag:"database" "password")
-    password
+  let typ =
+    Option.default_delayed
+      (fun () -> Configfile.fail_tag ~tag:"database")
+      database_type
+  in
+  let host =
+    Option.default_delayed
+      (fun () -> Configfile.fail_missing ~tag:"database" "host")
+      database_host
+  in
+  let name =
+    Option.default_delayed
+      (fun () -> Configfile.fail_missing ~tag:"database" "name")
+      database_name
+  in
+  match typ with
+  | "postgres" ->
+      let password =
+        Option.default_delayed
+          (fun () -> Configfile.fail_missing ~tag:"database" "password-file")
+          database_password
+      in
+      let user =
+        Option.default_delayed
+          (fun () -> Configfile.fail_missing ~tag:"database" "user")
+          database_user
+      in
+      Postgres {host; port = database_port; database = name; user; password}
+  | "mongo" ->
+      let port =
+        Option.default_delayed
+          (fun () -> Configfile.fail_missing ~tag:"database" "port")
+          database_port
+      in
+      let collection =
+        Option.default_delayed
+          (fun () -> Configfile.fail_missing ~tag:"database" "collection")
+          database_collection
+      in
+      MongoDB {host; port; name; collection}
+  | _ ->
+      raise
+        (Ocsigen_extensions.Error_in_config_file "Database type not recognize")
