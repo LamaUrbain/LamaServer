@@ -286,7 +286,7 @@ let () =
         Eliom_registration.String.send ~code:404 ("", "")
   in
 
-  let tiles_get_handler (id, ((), (z, (x, y)))) _ =
+  let tiles_get_handler (id, ((), (z, (x, (y, _))))) _ =
     let z = Itinerary.Zoomlevel.create z in
     Itinerary.get_image ~x ~y ~z id >>= fun image ->
     Eliom_registration.String.send (image, "image/png") in
@@ -405,7 +405,8 @@ let () =
                    suffix_const "tiles" **
                    int "z" **
                    int "x" **
-                   int "y")
+                   int "y" **
+		   any)
       )
       ()
   in
