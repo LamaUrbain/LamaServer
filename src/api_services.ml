@@ -114,7 +114,7 @@ let session_post_handler _ (username, password)  =
             D.create_session ~user
             >>= fun s -> send_success ~content:(Yojson.Safe.to_string (Sessions.to_yojson s)) ()
          ) (`Ok user_t)
-    | otherwise ->
+    | _ ->
         send_error
           ~code:404
           ("User not found")
@@ -146,7 +146,7 @@ let users_delete_handler (id, token) _ =
 	  D.delete_user id
 	    >>= fun s -> send_success ~content:"" ()
          ) (`Ok user_t)
-    | otherwise ->
+    | _ ->
         send_error
           ~code:404
           ("User not found")

@@ -44,4 +44,3 @@ Library "LamaUrbain"
 #  CCLib: `pkg-config --libs libosmscout-map-cairo`
   CCOpt: -x c++ -pthread -std=c++0x -fopenmp -mmmx -msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -I/usr/local/include -I/usr/include/cairo -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/pixman-1 -I/usr/include/freetype2 -I/usr/include/libdrm -I/usr/include/libpng12 -I/usr/include/pango-1.0 -I/usr/include/cairo -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/pixman-1 -I/usr/include/freetype2 -I/usr/include/libdrm -I/usr/include/libpng12 -I/usr/local/include -Wall -Wextra
   CCLib: -L/usr/local/lib -losmscoutmapcairo -lcairo -lpangocairo-1.0 -lpango-1.0 -lgobject-2.0 -lglib-2.0 -lcairo -lpng12 -losmscoutmap -losmscout -lstdc++
-  ByteOpt: -w A

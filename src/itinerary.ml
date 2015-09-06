@@ -240,7 +240,7 @@ let get_image ~x ~y ~z id =
   let surface = Cairo.Image.create Cairo.Image.ARGB32 ~width ~height in
   let context = Cairo.create surface in
   let magnification = Cpp.get_magnification (Unsigned.UInt32.of_int z) in
-  if Cpp.paint x y width height map_data magnification context then
+  if Cpp.paint ~x ~y ~width ~height ~map_data ~magnification ~context then
     let buf = Buffer.create 500_000 in
     Cairo.PNG.write_to_stream surface ~output:(Buffer.add_string buf);
     Lwt.return (Buffer.contents buf)
