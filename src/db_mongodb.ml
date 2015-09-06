@@ -1,12 +1,19 @@
 let empty = Bson.empty
 
-let mongo_addr _ =
-  let addrinfo = List.hd @@ Unix.getaddrinfo "mongo" "" []
-  in match addrinfo.ai_addr with
-     | ADDR_INET (a, i) -> Unix.string_of_inet_addr a
-     | _ -> assert false
+let get_collection collection =
+  match Config.database with
+  | Config.MongoDB {Config.host; port; name} ->
+      let mongo_addr _ =
+        let addrinfo = List.hd @@ Unix.getaddrinfo host "" [] in
+        match addrinfo.ai_addr with
+        | ADDR_INET (a, i) -> Unix.string_of_inet_addr a
+        | _ -> assert false
+      in
+      lazy (Mongo.create (mongo_addr ()) port name collection)
+  | Config.Postgres _ ->
+      lazy (assert false)
 
-let user_collection = lazy (Mongo.create (mongo_addr ()) 27017 "lamaurbain" "users")
+let user_collection = get_collection "users"
 
 let create_user ~username ~password ~email ~sponsor =
   try
@@ -155,7 +162,7 @@ let delete_user username =
   |> Mongo.delete_all (Lazy.force user_collection)
   |> Lwt.return
 
-let auth_collection = lazy (Mongo.create (mongo_addr ()) 27017 "lamaurbain" "auth")
+let auth_collection = get_collection "auth"
 
 let gen_str length =
   let gen() = match Random.int(26+26+10) with
@@ -204,11 +211,9 @@ let delete_session token =
   |> Lwt.return
 
 
-let coords_collection =
-  lazy (Mongo.create (mongo_addr ()) 27017 "lamaurbain" "coords")
+let coords_collection = get_collection "coords"
 
-let itineraries_collection =
-  lazy (Mongo.create (mongo_addr ()) 27017 "lamaurbain" "itineraries")
+let itineraries_collection = get_collection "itineraries"
 
 let get_option fct opt acc = match opt with
   | None -> acc

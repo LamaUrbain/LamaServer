@@ -15,7 +15,6 @@ type mongodb =
   { host : string
   ; port : int
   ; name : string
-  ; collection : string
   }
 
 type database =
@@ -32,7 +31,6 @@ type t =
   ; database_name : string option
   ; database_user : string option
   ; database_password : string option
-  ; database_collection : string option
   ; database_port : int option
   }
 
@@ -60,8 +58,6 @@ let rec init_fun data = function
              | ("password-file", password_file) ->
                  let password = File.with_file_in password_file IO.read_all in
                  {data with database_password = Some password}
-             | ("collection", collection) ->
-                 {data with database_collection = Some collection}
              | ("port", port) ->
                  {data with database_port = Some (int_of_string port)}
              | (x, _) -> Configfile.fail_attrib ~tag x
@@ -84,7 +80,6 @@ let { map
     ; database_name
     ; database_user
     ; database_password
-    ; database_collection
     ; database_port
     } =
   let data =
@@ -95,7 +90,6 @@ let { map
     ; database_name = None
     ; database_user = None
     ; database_password = None
-    ; database_collection = None
     ; database_port = None
     }
   in
@@ -147,12 +141,7 @@ let database =
           (fun () -> Configfile.fail_missing ~tag:"database" "port")
           database_port
       in
-      let collection =
-        Option.default_delayed
-          (fun () -> Configfile.fail_missing ~tag:"database" "collection")
-          database_collection
-      in
-      MongoDB {host; port; name; collection}
+      MongoDB {host; port; name}
   | _ ->
       raise
         (Ocsigen_extensions.Error_in_config_file "Database type not recognize")
