@@ -174,7 +174,7 @@ let sessions_delete_handler token _ =
         else Lwt.return(Error("User not allowed to edit this itinerary"))
         | None -> Lwt.return(Error("Invalid Session"))
       )
-        | None -> Lwt.return(Error("No token provided"))
+        | None -> if Option.is_none itinerary.owner then Lwt.return(Error("No token provided")) else Lwt.return(Answer(itinerary))
       )
     else Lwt.return(Answer(itinerary))
   end
