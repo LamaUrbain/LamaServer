@@ -25,4 +25,7 @@ sig
   val get_all_itineraries : unit -> Result_data.itinerary list Lwt.t
 end
 
-module Db (M : DBENGINE) = M
+module Db = (val (match Config.database with
+  | Config.Postgres _ -> (module Db_macaque)
+  | Config.MongoDB _ -> (module Db_mongodb)
+) : DBENGINE)

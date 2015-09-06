@@ -1,4 +1,4 @@
-module Db = Db.Db(Db_macaque)
+module Db = Db.Db
 
 open Lwt.Infix
 open Monomorphic

@@ -1,4 +1,4 @@
-module D = Db.Db(Db_macaque)
+module D = Db.Db
 open Request_data
 open BatteriesExceptionless
 
