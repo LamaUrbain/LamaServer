@@ -182,21 +182,21 @@ let sessions_delete_handler token _ =
 
 open Eliom_parameter
 
-let coord_of_param loc =
+let coord_of_param address loc =
    let rex = Pcre.regexp "^([-+]?\\d{1,2}([.]\\d+)?),\\s*([-+]?\\d{1,3}([.]\\d+)?)$" in
     let latlong = match Pcre.pmatch ~rex loc with
     | true -> Pcre.split ~rex:(Pcre.regexp ",") loc
     | false -> assert false in
     let (lat, long) = float_of_string (List.nth latlong 0), float_of_string (List.nth latlong 1) in
-    {latitude = lat; longitude = long; address = None}
+    {latitude = lat; longitude = long; address = address}
 
 let () =
 
   let dummy_handler _ _ = Eliom_registration.String.send ~code:201 ("", "") in
 
-  let itinerary_post_handler _ (departure, (favorite, (destination, (name, token)))) =
-    let destination = BatOption.map coord_of_param destination in
-    let departure = coord_of_param departure in
+  let itinerary_post_handler _ (departure, (departure_address, (destination_address, (favorite, (destination, (name, token)))))) =
+    let destination = BatOption.map (coord_of_param destination_address) destination in
+    let departure = coord_of_param departure_address departure in
     let coords : Request_data.itinerary_creation = {destination; departure; favorite; name} in
       wrap_errors
         (fun coords ->
@@ -214,11 +214,11 @@ let () =
     send_json ~code:200 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
   in
 
-  let itinerary_put_handler (id, (departure, (favorite, (name, token)))) _ =
+  let itinerary_put_handler (id, (departure, (departure_address, (favorite, (name, token))))) _ =
     check_itinerary_ownership id token >>= fun it ->
     match it with
     | Answer _ -> (
-      let departure = BatOption.map coord_of_param departure in
+      let departure = BatOption.map (coord_of_param departure_address) departure in
       let coords : Request_data.itinerary_edition = {departure; favorite; name} in
       wrap_errors
       (fun coords ->
@@ -232,11 +232,11 @@ let () =
     | Error e -> send_error ~code:403 e
   in
 
-  let destinations_post_handler (id, ()) (destination, (position, token)) =
+  let destinations_post_handler (id, ()) (destination, (destination_address, (position, token))) =
     check_itinerary_ownership id token >>= fun it ->
     match it with
     | Answer _ -> (
-    let destination = coord_of_param destination in
+    let destination = coord_of_param destination_address destination in
     let request = {destination; position} in
     wrap_errors
       (fun destination ->
@@ -250,12 +250,12 @@ let () =
     | Error e -> send_error ~code:403 e
   in
 
-  let destinations_put_handler ((id, ((), pos)), (destination, (position, token))) _ =
+  let destinations_put_handler ((id, ((), pos)), (destination, (destination_address, (position, token)))) _ =
     check_itinerary_ownership id token >>= fun it ->
     match it with
     | Answer _ -> (
     let edit : Request_data.Destination_edition.t =
-      {destination = BatOption.map coord_of_param destination; position}
+      {destination = BatOption.map (coord_of_param destination_address) destination; position}
     in
     wrap_errors
       (fun put ->
@@ -271,7 +271,7 @@ let () =
 
   let delete_handler (get, token) delete  =
     match get with
-    | [id; "destinations"; position] ->
+   | [id; "destinations"; position] ->
         let id = Int32.of_string id in
         let position = int_of_string position in
         Itinerary.delete_destination ~position id >>= fun itinerary ->
@@ -340,6 +340,8 @@ let () =
     Eliom_service.Http.post_service
       ~fallback:service
       ~post_params:(string "departure"
+		    ** opt (string "departure_address")
+		    ** opt (string "destination_address")
                     ** opt (bool "favorite")
                     ** opt (string "destination")
                     ** opt (string "name")
@@ -355,6 +357,7 @@ let () =
       ~get_params:(suffix_prod
                      (int32 "id")
                      (opt (string "departure")
+		      ** opt (string "departure_address")
                       ** opt (bool "favorite")
                       ** opt (string "name")
                       ** opt (string "token")
@@ -376,6 +379,7 @@ let () =
     Eliom_service.Http.post_service
       ~fallback:service
       ~post_params:(string "destination"
+		    ** opt (string "destination_address")
                     ** opt (int "position")
                     ** opt (string "token")
                   )
@@ -387,7 +391,7 @@ let () =
       ~path:["itineraries"]
       ~get_params:(suffix_prod
                      (int32 "id" ** suffix_const "destinations" ** int "pos")
-                     (opt (string "destination") ** opt (int "position") ** opt (string "token"))
+                     (opt (string "destination") ** opt (string "destination_address") ** opt (int "position") ** opt (string "token"))
                   )
       ()
   in
