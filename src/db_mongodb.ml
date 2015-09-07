@@ -201,29 +201,12 @@ let get_option fct opt acc = match opt with
 
 let create_coord coord =
   let open Request_data in
-  let id =
-    Lazy.force coords_collection
-    |> Mongo.count
-    |> Int32.of_int
-  in
-  let doc =
-    empty
-    |> Bson.add_element "id" @@ Bson.create_int32 id
-    |> get_option (fun x -> Bson.add_element "address" @@ Bson.create_string x) coord.address
+  empty
+  |> get_option (fun x -> Bson.add_element "address" @@ Bson.create_string x) coord.address
     |> Bson.add_element "latitude" @@ Bson.create_double coord.latitude
     |> Bson.add_element "longitude" @@ Bson.create_double coord.longitude
-  in
-  Mongo.insert (Lazy.force coords_collection) [doc];
-  id
 
-let get_coord id =
-  empty
-  |> Bson.add_element "id" @@ Bson.create_int32 id
-  |> Mongo.find_q_one (Lazy.force user_collection)
-  |> MongoReply.get_document_list
-  |> function
-  | [] -> Lwt.return None
-  | doc::_ ->
+let get_coord doc =
     Some
       Request_data.{
         address =
@@ -258,10 +241,10 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
     get_option
       (fun x acc -> Bson.add_element "favorite" (Bson.create_boolean x) acc)
       favorite
-    |> Bson.add_element "departure" (create_coord departure |> Bson.create_int32)
+    |> Bson.add_element "departure" (Bson.create_doc_element @@ create_coord departure)
     |> Bson.add_element "destinations"
       (
-        List.map (fun x -> create_coord x |> Bson.create_int32) destinations
+        List.map (fun x -> Bson.create_doc_element @@ create_coord x) destinations
         |> Bson.create_list
       )
   in
@@ -297,10 +280,10 @@ let update_itinerary itinerary =
     get_option
       (fun x acc -> Bson.add_element "favorite" (Bson.create_boolean x) acc)
       itinerary.favorite
-    |> Bson.add_element "departure" (create_coord itinerary.departure |> Bson.create_int32)
+    |> Bson.add_element "departure" (create_coord itinerary.departure |> Bson.create_doc_element)
     |> Bson.add_element "destinations"
       (
-        List.map (fun x -> create_coord x |> Bson.create_int32) itinerary.destinations
+        List.map (fun x -> create_coord x |> Bson.create_doc_element) itinerary.destinations
         |> Bson.create_list
       )
   in
@@ -315,13 +298,13 @@ let delete_itinerary id =
 
 let _get_itinerary doc =
   let open Lwt in
-  (Bson.get_element "departure" doc |> Bson.get_int32 |> get_coord)
+  (Bson.get_element "departure" doc |> Bson.get_doc_element |> get_coord)
   >>= function
     | None -> Lwt.return None
     | Some departure ->
       Bson.get_element "destinations" doc
       |> Bson.get_list
-      |> List.rev_map (fun x -> Bson.get_int32 x |> get_coord)
+      |> List.rev_map (fun x -> Bson.get_doc_element x |> get_coord)
       |> Lwt_list.fold_left_s
         (fun acc e ->
            e >>= (function Some x -> Lwt.return (x::acc) | None -> Lwt.return acc)
