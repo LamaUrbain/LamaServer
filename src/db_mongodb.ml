@@ -15,8 +15,10 @@ let get_collection collection =
 
 let user_collection = get_collection "users"
 
+let gen_id _ = Random.int 50000
+
 let create_user ~username ~password ~email ~sponsor =
-  try
+  let id = gen_id() in
     let doc =
       empty
       |> Bson.add_element "username" (Bson.create_string username)
@@ -24,7 +26,7 @@ let create_user ~username ~password ~email ~sponsor =
       |> Bson.add_element "email" (Bson.create_string email)
       |> Bson.add_element "sponsor" (Bson.create_boolean sponsor)
       |> Bson.add_element "id"
-        (Lazy.force user_collection |> Mongo.count |> Int32.of_int |> Bson.create_int32)
+			  (id |> Int32.of_int |> Bson.create_int32)
     in
     Mongo.insert (Lazy.force user_collection) [doc];
     Lwt.return
@@ -34,10 +36,10 @@ let create_user ~username ~password ~email ~sponsor =
         email;
         created = "";
 	sponsor = false;
-        id=0;
-      }
-  with
-  | _ -> assert false
+        id;
+    }
+    with
+    | _ -> assert false
 
 let find_user id =
   let query =
@@ -221,8 +223,7 @@ let get_coord doc =
 
 let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
   let id =
-    Lazy.force itineraries_collection
-    |> Mongo.count
+    gen_id()
     |> Int32.of_int
   in
   let doc =
