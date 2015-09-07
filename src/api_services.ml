@@ -34,7 +34,8 @@ let read_raw_content ?(length = 4096) raw_content =
 
 let user_get_handler (id_opt, (search_pattern, sponsored)) () =
   match id_opt, sponsored with
-  | None, None ->
+  | None, None
+  | None, Some false->
      begin
        match search_pattern with
        | None ->
@@ -425,7 +426,7 @@ let () =
   let service =
     Eliom_service.Http.service
       ~path:["users"]
-      ~get_params:(suffix_prod (neopt (int "id")) (opt (string "search") ** opt (bool "sponsored")))
+      ~get_params:(suffix_prod (neopt (int "id")) (neopt (string "search") ** neopt (bool "sponsored")))
       () in
   Eliom_registration.Any.register ~service user_get_handler;
 
