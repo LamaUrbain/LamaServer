@@ -51,14 +51,14 @@ let user_get_handler (id_opt, (search_pattern, sponsored)) () =
 	      ~code:200
 	      (Yojson.Safe.to_string (Users.users_to_yojson users))
      end
-  | _, Some is_sponsor ->
-     D.get_sponsored_users is_sponsor
+  | _, Some true ->
+     D.get_sponsored_users true
      >>= fun users ->
      send_json
        ~code:200
        (Yojson.Safe.to_string (Users.users_to_yojson users))
   | Some id, _ ->
-    (
+     (
       D.find_user id
       >>= function
       | Some u ->
