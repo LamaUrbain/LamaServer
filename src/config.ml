@@ -57,7 +57,7 @@ let rec init_fun data = function
              | ("user", user) -> {data with database_user = Some user}
              | ("password-file", password_file) ->
                  let password = File.with_file_in password_file IO.read_all in
-                 {data with database_password = Some password}
+                 {data with database_password = Some (String.trim password)}
              | ("port", port) ->
                  {data with database_port = Some (int_of_string port)}
              | (x, _) -> Configfile.fail_attrib ~tag x
