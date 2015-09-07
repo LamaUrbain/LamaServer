@@ -116,26 +116,6 @@ let search_user username =
 		 created = "";
 	      } 
 	    ) doc)
-let get_sponsored_users _ =
-  empty
-  |> Bson.add_element "sponsored" (Bson.create_boolean true)
-  |> Mongo.find_q (Lazy.force user_collection)
-  |> MongoReply.get_document_list
-  |> function
-    | [] -> Lwt.return []
-    | doc ->
-       Lwt.return
-	 (List.map
-	    (fun u ->
-		Users.{
-		 username = Bson.get_element "username" u |> Bson.get_string;
-		 password = Bson.get_element "password" u |> Bson.get_string;
-		 sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
-		 email = Bson.get_element "email" u |> Bson.get_string;
-		 id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
-		 created = "";
-	      } 
-	    ) doc)
 
 let get_all_users _ =
   Mongo.find (Lazy.force user_collection)
