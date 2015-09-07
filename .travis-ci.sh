@@ -35,7 +35,7 @@ sed -i 's/STYLE/libosmscout\/stylesheets\/standard.oss/g' ocsigenserver.conf
 sudo -u postgres psql -f postgres-docker/createdb.sql
 make run &
 sleep 10
-curl http://localhost:8080/users/0 -o check
+curl http://localhost:8080/users/ -o check
 check=`cat check`
 if [[ ! $check =~ "[]" ]]; then
     exit 1
