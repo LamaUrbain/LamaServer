@@ -38,8 +38,6 @@ let create_user ~username ~password ~email ~sponsor =
 	sponsor = false;
         id;
     }
-    with
-    | _ -> assert false
 
 let find_user id =
   let query =
