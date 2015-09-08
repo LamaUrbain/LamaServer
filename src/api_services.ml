@@ -59,7 +59,7 @@ let user_get_handler (id_opt, (search_pattern, sponsored)) () =
        (Yojson.Safe.to_string (Users.users_to_yojson users))
   | Some id, _ ->
      (
-      D.find_user id
+      D.find_user_username id
       >>= function
       | Some u ->
         send_json
@@ -426,7 +426,7 @@ let () =
   let service =
     Eliom_service.Http.service
       ~path:["users"]
-      ~get_params:(suffix_prod (neopt (int "id")) (neopt (string "search") ** neopt (bool "sponsored")))
+      ~get_params:(suffix_prod (neopt (string "id")) (neopt (string "search") ** neopt (bool "sponsored")))
       () in
   Eliom_registration.Any.register ~service user_get_handler;
 
