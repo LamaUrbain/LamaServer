@@ -43,20 +43,20 @@ let user_get_handler (id_opt, (search_pattern, sponsored)) () =
 	  >>= fun users ->
 	  send_json
 	    ~code:200
-	    (Yojson.Safe.to_string (Users.users_to_yojson users))
+	    (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
        | Some pattern ->
 	    D.search_user pattern
 	    >>= fun users ->
 	    send_json
 	      ~code:200
-	      (Yojson.Safe.to_string (Users.users_to_yojson users))
+	      (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
      end
   | _, Some true ->
      D.get_sponsored_users true
      >>= fun users ->
      send_json
        ~code:200
-       (Yojson.Safe.to_string (Users.users_to_yojson users))
+       (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
   | Some id, _ ->
      (
       D.find_user_username id
@@ -64,7 +64,7 @@ let user_get_handler (id_opt, (search_pattern, sponsored)) () =
       | Some u ->
         send_json
           ~code:200
-          (Yojson.Safe.to_string (Users.to_yojson u))
+          (Yojson.Safe.to_string (Users.response_to_yojson (Users.to_response u)))
       | _ ->
         send_error
           ~code:404
@@ -99,7 +99,7 @@ let user_post_handler _ (username ,(password, (email, sponsor)))  =
               ~password:user.password
               ~email:user.email
 	      ~sponsor:sponsor
-            >>= fun u -> send_success ~content:(Yojson.Safe.to_string (Users.to_yojson u)) ()
+            >>= fun u -> send_success ~content:(Yojson.Safe.to_string (Users.response_to_yojson (Users.to_response u))) ()
          ) (`Ok user)
 
 let session_post_handler _ (username, password)  =
