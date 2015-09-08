@@ -152,7 +152,7 @@ let gen_str length =
   let gen _ = String.make 1 (char_of_int(gen())) in
   String.concat "" (Array.to_list (Array.init length gen))
 
-let create_session ~user =
+let create_session ~(user : Users.t) =
   let token = gen_str 32 in
   let owner = user.Users.username in
   let doc =
