@@ -259,6 +259,18 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
     }
   |> (fun i -> Lwt.return (Some i))
 
+let edit_user ~id ~username ~password ~email ~sponsor =
+  let query = empty |> Bson.add_element "username" @@ Bson.create_string id in
+  let doc =
+    query
+    |> get_option (fun x acc -> Bson.add_element "username" (Bson.create_string x) acc) username
+    |> get_option (fun x acc -> Bson.add_element "email" (Bson.create_string x) acc) email
+    |> get_option (fun x acc -> Bson.add_element "password" (Bson.create_string x) acc) password
+    |> get_option (fun x acc -> Bson.add_element "sponsor" (Bson.create_boolean x) acc) sponsor
+  in
+  Mongo.update_one (Lazy.force user_collection) (query, doc)
+  |> Lwt.return
+
 let update_itinerary itinerary =
   let open Result_data in
   let query =

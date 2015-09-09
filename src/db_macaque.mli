@@ -5,6 +5,7 @@ val delete_user : string -> unit Lwt.t
 val get_all_users : unit -> Users.t list Lwt.t
 val get_sponsored_users : bool -> Users.t list Lwt.t
 val search_user : string -> Users.t list Lwt.t
+val edit_user : id:string -> username:string option -> password:string option -> email:string option -> sponsor:bool option -> unit Lwt.t
 
 val create_session : user:Users.t -> Sessions.t Lwt.t
 val find_session : string -> Sessions.t option Lwt.t

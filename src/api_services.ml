@@ -152,6 +152,20 @@ let users_delete_handler (id, token) _ =
           ~code:404
           ("User not found")
 
+let users_put_handler (id, (token, (username, (email, (password, sponsor))))) _ =
+  D.find_user_username id >>= fun u ->
+  match u with
+    | Some user_t ->
+       wrap_errors
+         (fun user ->
+	  D.edit_user ~id ~username ~email ~password ~sponsor
+	    >>= fun s -> send_success ~content:"" ()
+         ) (`Ok user_t)
+    | _ ->
+        send_error
+          ~code:404
+          ("User not found")
+
 let sessions_delete_handler token _ =
   wrap_errors
     (fun _ ->
@@ -472,3 +486,16 @@ let () =
       ()
   in
   Eliom_registration.Any.register ~service sessions_delete_handler;
+
+  let service =
+    Eliom_service.Http.put_service
+      ~path:["users"]
+      ~get_params:(suffix_prod (string "id")
+			       ((string "token") **
+				  neopt (string "email") **
+				    neopt (string "username") **
+				      neopt (string "password") **
+					neopt (bool "sponsor")))
+      ()
+  in
+  Eliom_registration.Any.register ~service users_put_handler;

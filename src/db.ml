@@ -4,8 +4,10 @@ sig
   val find_user : int -> Users.t option Lwt.t
   val find_user_username : string -> Users.t option Lwt.t
   val delete_user : string -> unit Lwt.t
+  val edit_user : id:string -> username:string -> password:string -> email:string -> sponsor:bool -> Users.t Lwt.t
   val get_all_users : unit -> Users.t list Lwt.t
   val get_sponsored_users : bool -> Users.t list Lwt.t
+  val edit_user : id:string -> username:string option -> password:string option -> email:string option -> sponsor:bool option -> unit Lwt.t
   val search_user : string -> Users.t list Lwt.t
 
   val create_session : user:Users.t -> Sessions.t Lwt.t

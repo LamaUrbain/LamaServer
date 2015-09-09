@@ -270,6 +270,17 @@ let update_itinerary itinerary =
       destinations = $int32_array:destinations$;
     } | t.id = $int32:itinerary.Result_data.id$ >>)
 
+let edit_user ~id ~username ~password ~email ~sponsor =
+  Lwt.return_unit
+  (* Db.query *)
+  (*   (<:update< t in $users_table$ := { *)
+  (*     username = of_option $Option.map Sql.Value.string username$; *)
+  (*     email = of_option $Option.map Sql.Value.string email$; *)
+  (*     password = of_option $Option.map Sql.Value.string password$; *)
+  (*     sponsor = of_option $Option.map Sql.Value.bool sponsor$; *)
+  (*     created = $timestamp:t.created$; *)
+  (*   } | t.username = $string:id$ >>) *)
+
 let delete_itinerary id =
   Db.query (<:delete< t in $itineraries_table$ | t.id = $int32:id$ >>)
 
