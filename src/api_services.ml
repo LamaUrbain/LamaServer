@@ -224,7 +224,7 @@ let () =
     (`Ok coords)
   in
 
-  let itinerary_get_handler id () =
+  let itinerary_get_handler (id, token) () =
     Itinerary.get id >>= fun itinerary ->
     send_json ~code:200 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
   in
@@ -335,7 +335,7 @@ let () =
   let service =
     Eliom_service.Http.service
       ~path:["itineraries"]
-      ~get_params:(suffix (int32 "id"))
+      ~get_params:(suffix_prod (int32 "id") (neopt (string "token")))
       ()
   in
   Eliom_registration.Any.register ~service itinerary_get_handler;
