@@ -184,7 +184,7 @@ let sessions_delete_handler (token, _) _ =
         | Some t -> (
           D.find_session t >>= fun s ->
           match s with
-          | Some session -> if BatOption.is_none @@ BatOption.map ((=) session.owner) itinerary.owner
+          | Some session -> if BatOption.is_some @@ BatOption.map ((=) session.owner) itinerary.owner
           then Lwt.return(Answer(itinerary))
         else Lwt.return(Error("User not allowed to edit this itinerary"))
         | None -> Lwt.return(Error("Invalid Session"))
