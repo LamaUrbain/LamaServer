@@ -48,7 +48,7 @@ let create_user ~username ~password ~email ~sponsor =
         password;
         email;
         created = "";
-	sponsor = false;
+	sponsor;
         id = Int32.to_int id;
       })
 
