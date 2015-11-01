@@ -25,6 +25,16 @@ sig
   val delete_itinerary : int32 -> unit Lwt.t
   val get_itinerary : int32 -> Result_data.itinerary option Lwt.t
   val get_all_itineraries : unit -> Result_data.itinerary list Lwt.t
+
+  val create_incident :
+    name:string option ->
+    begin_:float ->
+    end_:float option ->
+    position:Request_data.coord ->
+    Result_data.incident option Lwt.t
+  val delete_incident : int32 -> unit Lwt.t
+  val get_incident : int32 -> Result_data.incident option Lwt.t
+  val get_all_incidents : unit -> Result_data.incident list Lwt.t
 end
 
 module Db = (val (match Config.database with
