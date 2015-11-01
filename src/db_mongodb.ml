@@ -363,3 +363,75 @@ let get_all_itineraries _ =
   |> Lwt_list.fold_left_s
     (fun acc e -> e >>= (function Some x -> Lwt.return (x::acc) | None -> Lwt.return acc))
     []
+
+let incidents_collection = get_collection "incidents"
+
+let create_incident ~name ~begin_ ~end_ ~position =
+  let id =
+    gen_id()
+    |> Int32.of_int
+  in
+  let doc =
+    empty
+    |> Bson.add_element "id" @@ Bson.create_int32 id
+    |> Bson.add_element "name" @@ Bson.create_string name
+    |> Bson.add_element "begin_" @@ Bson.create_string "dumy"
+    |>
+    get_option
+      (fun x acc -> Bson.add_element "end_" (Bson.create_string "dumy") acc)
+      end_
+    |> Bson.add_element "position" (Bson.create_doc_element @@ create_coord position)
+  in
+  Mongo.insert (Lazy.force incidents_collection) [doc];
+  Result_data.{
+    id;
+    name;
+    begin_;
+    end_;
+    position;
+  }
+  |> (fun i -> Lwt.return (Some i))
+
+let delete_incident id =
+  empty
+  |> Bson.add_element "id" @@ Bson.create_int32 id
+  |> Mongo.delete_all (Lazy.force incidents_collection)
+  |> Lwt.return
+
+
+let _get_incident doc =
+  let open Lwt in
+  (Bson.get_element "position" doc |> Bson.get_doc_element |> get_coord)
+  >>= function
+  | None -> Lwt.return None
+  | Some position ->
+    Some
+      Result_data.{
+        id = (Bson.get_element "id" doc |> Bson.get_int32);
+        name = (Bson.get_element "name" doc |> Bson.get_string);
+        begin_ = (Bson.get_elemt "begin_" doc |> Bson.get_string |> float_of_string);
+        end_ =
+          (try
+             Some (Bson.get_element "end_" doc |> Bson.get_string |> float_of_string)
+           with _ -> None);
+        position;
+      }
+    |> Lwt.return
+
+
+let get_incident id =
+  let open Lwt in
+  empty
+  |> Bson.add_element "id" @@ Bson.create_int32 id
+  |> Mongo.find_q_s (Lazy.force incidents_collection)
+  |> MongoReply.get_document_list
+  |> function
+  | [] -> Lwt.return None
+  | doc::_ -> _get_incident doc
+
+let get_all_incident () =
+  let now = "" in
+  Mongo.find (Lazy.force incidents_collection)
+  |> MongoReply.get_document_list
+  |> List.rev_map _get_incident
+  |> Lwt_list.filter_s (fun x -> Lwt.return (x.Result_data.end_ = None || x.Result_data.end_ > now))
