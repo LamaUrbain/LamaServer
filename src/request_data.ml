@@ -45,7 +45,7 @@ end
 type incident_creation =
   {
     name : string;
-    position : coord;
     begin_ : string;
     end_ : string option;
+    position : coord;
   } [@@deriving yojson]

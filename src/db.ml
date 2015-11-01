@@ -27,7 +27,7 @@ sig
   val get_all_itineraries : unit -> Result_data.itinerary list Lwt.t
 
   val create_incident :
-    name:string option ->
+    name:string ->
     begin_:float ->
     end_:float option ->
     position:Request_data.coord ->
