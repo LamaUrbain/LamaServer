@@ -271,7 +271,7 @@ let edit_user ~id ~username ~password ~email ~sponsor =
   Mongo.update_one (Lazy.force user_collection) (query, doc)
   |> Lwt.return
 
-let update_itinerary itinerary =
+let update_itinerary (itinerary : Result_data.itinerary) =
   let open Result_data in
   let query =
     empty
