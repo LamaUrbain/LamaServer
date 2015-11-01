@@ -293,7 +293,7 @@ let incidents_id_seq = (<:sequence< serial "incidents_id_seq" >>)
 let incidents_table =
   (<:table< incidents_table (
     id integer NOT NULL DEFAULT(nextval $incidents_id_seq$),
-    name text,
+    name text NOT NULL,
     begin_ timestamp NOT NULL,
     end_ timestamp,
     position integer NOT NULL
@@ -302,11 +302,12 @@ let incidents_table =
 let to_incident incident =
   Db.view_one (<:view< t | t in $coords_table$; t.id = $incident#position$ >>)
   >|= to_coord >>= fun position ->
-  {
-    Result_data.id = incident#!id;
+  Lwt.return
+    Incident.{
+    id = incident#!id;
     name = incident#!name;
-    begin_ = CalendarLib.Printer.Calendar.sprint "%iT%TZ" incident#!begin_;
-    end_ = BatOption.map (CalendarLib.Printer.Calendar.sprint "%iT%TZ") incident#?end_;
+    begin_ = incident#!begin_;
+    end_ = incident#?end_;
     position;
   }
 
@@ -325,9 +326,7 @@ let create_incident ~name ~begin_ ~end_ ~position =
        end_ = of_option $Option.map Sql.Value.timestamp end_$;
        position = $int32:position_id$;
     } >>)
-  >>= fun () ->
-  get_incident incident_id
-  ()
+  >>= fun () -> get_incident incident_id
 
 let delete_incident id =
   Db.query (<:delete< t in $incidents_table$ | t.id = $int32:id$ >>)
@@ -335,5 +334,5 @@ let delete_incident id =
 let get_all_incidents () =
   let now = <:value< localtimestamp () >> in
   Db.view(<:view< t | t in $incidents_table$;
-                  t.end_ = null || t.end_ > $timestamp:now$ >>)
+                  t.end_ = null || t.end_ > now >>)
   >>= Lwt_list.map_s to_incident

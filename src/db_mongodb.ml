@@ -375,22 +375,22 @@ let create_incident ~name ~begin_ ~end_ ~position =
     empty
     |> Bson.add_element "id" @@ Bson.create_int32 id
     |> Bson.add_element "name" @@ Bson.create_string name
-    |> Bson.add_element "begin_" @@ Bson.create_string "dumy"
+    |> Bson.add_element "begin_" @@ Bson.create_double @@ CalendarLib.Calendar.to_unixfloat begin_
     |>
     get_option
-      (fun x acc -> Bson.add_element "end_" (Bson.create_string "dumy") acc)
+      (fun x -> Bson.add_element "end_" (Bson.create_double @@ CalendarLib.Calendar.to_unixfloat x))
       end_
     |> Bson.add_element "position" (Bson.create_doc_element @@ create_coord position)
   in
   Mongo.insert (Lazy.force incidents_collection) [doc];
-  Result_data.{
-    id;
-    name;
+  Incident.{
+    position;
     begin_;
     end_;
-    position;
+    id;
+    name;
   }
-  |> (fun i -> Lwt.return (Some i))
+  |> (fun x -> Lwt.return (Some x))
 
 let delete_incident id =
   empty
@@ -406,13 +406,21 @@ let _get_incident doc =
   | None -> Lwt.return None
   | Some position ->
     Some
-      Result_data.{
+      Incident.{
         id = (Bson.get_element "id" doc |> Bson.get_int32);
         name = (Bson.get_element "name" doc |> Bson.get_string);
-        begin_ = (Bson.get_elemt "begin_" doc |> Bson.get_string |> float_of_string);
+        begin_ = (
+          Bson.get_element "begin_" doc
+          |> Bson.get_double
+          |> CalendarLib.Calendar.from_unixfloat
+        );
         end_ =
           (try
-             Some (Bson.get_element "end_" doc |> Bson.get_string |> float_of_string)
+             Some (
+               Bson.get_element "end_" doc
+               |> Bson.get_double
+               |> CalendarLib.Calendar.from_unixfloat
+             );
            with _ -> None);
         position;
       }
@@ -423,15 +431,28 @@ let get_incident id =
   let open Lwt in
   empty
   |> Bson.add_element "id" @@ Bson.create_int32 id
-  |> Mongo.find_q_s (Lazy.force incidents_collection)
+  |> Mongo.find_q_one (Lazy.force incidents_collection)
   |> MongoReply.get_document_list
   |> function
   | [] -> Lwt.return None
   | doc::_ -> _get_incident doc
 
-let get_all_incident () =
-  let now = "" in
+let get_all_incidents () =
+  let open Lwt in
+  let now = CalendarLib.Calendar.now () in
   Mongo.find (Lazy.force incidents_collection)
   |> MongoReply.get_document_list
   |> List.rev_map _get_incident
-  |> Lwt_list.filter_s (fun x -> Lwt.return (x.Result_data.end_ = None || x.Result_data.end_ > now))
+  |> Lwt_list.fold_left_s
+    (fun acc e -> e >>=
+      (function
+        | Some x ->
+          begin
+            if (BatOption.map_default (fun x -> x > now) true x.Incident.end_)
+            then Lwt.return (x::acc)
+            else Lwt.return acc
+          end
+        | None -> Lwt.return acc
+      )
+    )
+    []

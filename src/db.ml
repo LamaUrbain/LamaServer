@@ -28,13 +28,13 @@ sig
 
   val create_incident :
     name:string ->
-    begin_:float ->
-    end_:float option ->
+    begin_:CalendarLib.Calendar.t ->
+    end_:CalendarLib.Calendar.t option ->
     position:Request_data.coord ->
-    Result_data.incident option Lwt.t
+    Incident.t option Lwt.t
   val delete_incident : int32 -> unit Lwt.t
-  val get_incident : int32 -> Result_data.incident option Lwt.t
-  val get_all_incidents : unit -> Result_data.incident list Lwt.t
+  val get_incident : int32 -> Incident.t option Lwt.t
+  val get_all_incidents : unit -> Incident.t list Lwt.t
 end
 
 module Db = (val (match Config.database with
