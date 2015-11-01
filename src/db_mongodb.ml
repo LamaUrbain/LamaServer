@@ -3,15 +3,15 @@ let empty = Bson.empty
 let get_collection collection =
   match Config.database with
   | Config.MongoDB {Config.host; port; name} ->
-      let mongo_addr _ =
-        let addrinfo = List.hd @@ Unix.getaddrinfo host "" [] in
-        match addrinfo.ai_addr with
-        | ADDR_INET (a, i) -> Unix.string_of_inet_addr a
-        | _ -> assert false
-      in
-      lazy (Mongo.create (mongo_addr ()) port name collection)
+    let mongo_addr _ =
+      let addrinfo = List.hd @@ Unix.getaddrinfo host "" [] in
+      match addrinfo.ai_addr with
+      | ADDR_INET (a, i) -> Unix.string_of_inet_addr a
+      | _ -> assert false
+    in
+    lazy (Mongo.create (mongo_addr ()) port name collection)
   | Config.Postgres _ ->
-      lazy (assert false)
+    lazy (assert false)
 
 let user_collection = get_collection "users"
 
@@ -19,24 +19,24 @@ let gen_id _ = Random.int 50000
 
 let create_user ~username ~password ~email ~sponsor =
   let id = gen_id() in
-    let doc =
-      empty
-      |> Bson.add_element "username" (Bson.create_string username)
-      |> Bson.add_element "password" (Bson.create_string password)
-      |> Bson.add_element "email" (Bson.create_string email)
-      |> Bson.add_element "sponsor" (Bson.create_boolean sponsor)
-      |> Bson.add_element "id"
-			  (id |> Int32.of_int |> Bson.create_int32)
-    in
-    Mongo.insert (Lazy.force user_collection) [doc];
-    Lwt.return
-      Users.{
-        username;
-        password;
-        email;
-        created = "";
-	sponsor = false;
-        id;
+  let doc =
+    empty
+    |> Bson.add_element "username" (Bson.create_string username)
+    |> Bson.add_element "password" (Bson.create_string password)
+    |> Bson.add_element "email" (Bson.create_string email)
+    |> Bson.add_element "sponsor" (Bson.create_boolean sponsor)
+    |> Bson.add_element "id"
+	  (id |> Int32.of_int |> Bson.create_int32)
+  in
+  Mongo.insert (Lazy.force user_collection) [doc];
+  Lwt.return
+    Users.{
+      username;
+      password;
+      email;
+      created = "";
+	  sponsor = false;
+      id;
     }
 
 let find_user id =
@@ -47,13 +47,13 @@ let find_user id =
   match MongoReply.get_document_list response with
   | [] -> Lwt.return None
   | doc::_ ->
-      let username = Bson.get_element "username" doc |> Bson.get_string in
-      let password = Bson.get_element "password" doc |> Bson.get_string in
-      let email = Bson.get_element "email" doc |> Bson.get_string in
-      let created = "" in
-      let sponsor = Bson.get_element "sponsor" doc |> Bson.get_boolean in
-      let open Users in
-      Lwt.return (Some {username; password; email;id; sponsor; created})
+    let username = Bson.get_element "username" doc |> Bson.get_string in
+    let password = Bson.get_element "password" doc |> Bson.get_string in
+    let email = Bson.get_element "email" doc |> Bson.get_string in
+    let created = "" in
+    let sponsor = Bson.get_element "sponsor" doc |> Bson.get_boolean in
+    let open Users in
+    Lwt.return (Some {username; password; email;id; sponsor; created})
 
 let find_user_username username =
   empty
@@ -81,60 +81,60 @@ let get_sponsored_users _ =
   |> Mongo.find_q (Lazy.force user_collection)
   |> MongoReply.get_document_list
   |> function
-    | [] -> Lwt.return []
-    | doc ->
-       Lwt.return
-	 (List.map
-	    (fun u ->
-		Users.{
-		 username = Bson.get_element "username" u |> Bson.get_string;
-		 password = Bson.get_element "password" u |> Bson.get_string;
-		 sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
-		 email = Bson.get_element "email" u |> Bson.get_string;
-		 id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
-		 created = "";
-	      } 
+  | [] -> Lwt.return []
+  | doc ->
+    Lwt.return
+	  (List.map
+	     (fun u ->
+		    Users.{
+		      username = Bson.get_element "username" u |> Bson.get_string;
+		      password = Bson.get_element "password" u |> Bson.get_string;
+		      sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
+		      email = Bson.get_element "email" u |> Bson.get_string;
+		      id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
+		      created = "";
+	        }
 	     ) doc)
-	 
+
 let search_user username =
   empty
   |> Bson.add_element "sponsored" (Bson.create_string username)
   |> Mongo.find_q (Lazy.force user_collection)
   |> MongoReply.get_document_list
   |> function
-    | [] -> Lwt.return []
-    | doc ->
-       Lwt.return
-	 (List.map
-	    (fun u ->
-		Users.{
-		 username = Bson.get_element "username" u |> Bson.get_string;
-		 password = Bson.get_element "password" u |> Bson.get_string;
-		 sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
-		 email = Bson.get_element "email" u |> Bson.get_string;
-		 id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
-		 created = "";
-	      } 
-	    ) doc)
+  | [] -> Lwt.return []
+  | doc ->
+    Lwt.return
+	  (List.map
+	     (fun u ->
+		    Users.{
+		      username = Bson.get_element "username" u |> Bson.get_string;
+		      password = Bson.get_element "password" u |> Bson.get_string;
+		      sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
+		      email = Bson.get_element "email" u |> Bson.get_string;
+		      id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
+		      created = "";
+	        }
+	     ) doc)
 
 let get_all_users _ =
   Mongo.find (Lazy.force user_collection)
   |> MongoReply.get_document_list
   |> function
-    | [] -> Lwt.return []
-    | doc ->
-       Lwt.return
-	 (List.map
-	    (fun u ->
-		Users.{
-		 username = Bson.get_element "username" u |> Bson.get_string;
-		 password = Bson.get_element "password" u |> Bson.get_string;
-		 sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
-		 email = Bson.get_element "email" u |> Bson.get_string;
-		 id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
-		 created = "";
-	      } 
-	    ) doc)
+  | [] -> Lwt.return []
+  | doc ->
+    Lwt.return
+	  (List.map
+	     (fun u ->
+		    Users.{
+		      username = Bson.get_element "username" u |> Bson.get_string;
+		      password = Bson.get_element "password" u |> Bson.get_string;
+		      sponsor = Bson.get_element "sponsor" u |> Bson.get_boolean;
+		      email = Bson.get_element "email" u |> Bson.get_string;
+		      id = Bson.get_element "id" u |> Bson.get_int32 |> Int32.to_int;
+		      created = "";
+	        }
+	     ) doc)
 
 let delete_user username =
   empty
@@ -203,20 +203,20 @@ let create_coord coord =
   let open Request_data in
   empty
   |> get_option (fun x -> Bson.add_element "address" @@ Bson.create_string x) coord.address
-    |> Bson.add_element "latitude" @@ Bson.create_double coord.latitude
-    |> Bson.add_element "longitude" @@ Bson.create_double coord.longitude
+  |> Bson.add_element "latitude" @@ Bson.create_double coord.latitude
+  |> Bson.add_element "longitude" @@ Bson.create_double coord.longitude
 
 let get_coord doc =
-    Some
-      Request_data.{
-        address =
-          (try
-             Some (Bson.get_element "address" doc |> Bson.get_string)
-           with _ -> None)
-        ;
-        latitude = Bson.get_element "latitude" doc |> Bson.get_double;
-        longitude = Bson.get_element "longitude" doc |> Bson.get_double;
-      }
+  Some
+    Request_data.{
+      address =
+        (try
+           Some (Bson.get_element "address" doc |> Bson.get_string)
+         with _ -> None)
+      ;
+      latitude = Bson.get_element "latitude" doc |> Bson.get_double;
+      longitude = Bson.get_element "longitude" doc |> Bson.get_double;
+    }
   |> Lwt.return
 
 let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
@@ -248,15 +248,15 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
       )
   in
   Mongo.insert (Lazy.force itineraries_collection) [doc];
-    Result_data.{
-      id;
-      owner;
-      name;
-      creation = "";
-      favorite;
-      departure;
-      destinations;
-    }
+  Result_data.{
+    id;
+    owner;
+    name;
+    creation = "";
+    favorite;
+    departure;
+    destinations;
+  }
   |> (fun i -> Lwt.return (Some i))
 
 let edit_user ~id ~username ~password ~email ~sponsor =
@@ -311,38 +311,38 @@ let _get_itinerary doc =
   let open Lwt in
   (Bson.get_element "departure" doc |> Bson.get_doc_element |> get_coord)
   >>= function
-    | None -> Lwt.return None
-    | Some departure ->
-      Bson.get_element "destinations" doc
-      |> Bson.get_list
-      |> List.rev_map (fun x -> Bson.get_doc_element x |> get_coord)
-      |> Lwt_list.fold_left_s
-        (fun acc e ->
-           e >>= (function Some x -> Lwt.return (x::acc) | None -> Lwt.return acc)
-        )
-        []
-      >>= fun destinations ->
-      Some
-        Result_data.{
-          id = (Bson.get_element "id" doc |> Bson.get_int32);
-          owner =
-            (try
-               Some (Bson.get_element "owner" doc |> Bson.get_string)
-             with _ -> None)
-          ;
-          name =
-            (try
-               Some (Bson.get_element "name" doc |> Bson.get_string)
-             with _ -> None);
-          creation = "";
-          favorite =
-            (try
-               Some (Bson.get_element "favorite" doc |> Bson.get_boolean)
-             with _ -> None);
-          departure;
-          destinations;
-        }
-      |> Lwt.return
+  | None -> Lwt.return None
+  | Some departure ->
+    Bson.get_element "destinations" doc
+    |> Bson.get_list
+    |> List.rev_map (fun x -> Bson.get_doc_element x |> get_coord)
+    |> Lwt_list.fold_left_s
+      (fun acc e ->
+         e >>= (function Some x -> Lwt.return (x::acc) | None -> Lwt.return acc)
+      )
+      []
+    >>= fun destinations ->
+    Some
+      Result_data.{
+        id = (Bson.get_element "id" doc |> Bson.get_int32);
+        owner =
+          (try
+             Some (Bson.get_element "owner" doc |> Bson.get_string)
+           with _ -> None)
+        ;
+        name =
+          (try
+             Some (Bson.get_element "name" doc |> Bson.get_string)
+           with _ -> None);
+        creation = "";
+        favorite =
+          (try
+             Some (Bson.get_element "favorite" doc |> Bson.get_boolean)
+           with _ -> None);
+        departure;
+        destinations;
+      }
+    |> Lwt.return
 
 let get_itinerary id =
   let open Lwt in
