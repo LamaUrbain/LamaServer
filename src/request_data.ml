@@ -41,3 +41,11 @@ module Destination_edition = struct
     ; position : int option
     } [@@deriving yojson]
 end
+
+type incident_creation =
+  {
+    name : string;
+    position : coord;
+    begin_ : string;
+    end_ : string option;
+  } [@@deriving yojson]
