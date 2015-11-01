@@ -14,5 +14,5 @@ type incident =
     name : string option;
     begin_ : string;
     end_ : string;
-    position : Request_data.cood;
+    position : Request_data.coord;
   } [@@deriving yojson]
