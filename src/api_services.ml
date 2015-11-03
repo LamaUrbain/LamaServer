@@ -32,33 +32,40 @@ let read_raw_content ?(length = 4096) raw_content =
   let content_stream = Ocsigen_stream.get raw_content in
   Ocsigen_stream.string_of_stream length content_stream
 
+let incidents_get_handler _ () =
+  D.get_all_incidents ()
+    >>= fun incidents ->
+        send_json
+          ~code:200
+          (Yojson.Safe.to_string (Incident.incidents_response_to_yojson (List.map Incident.to_response incidents)))
+
 let user_get_handler (id_opt, (search_pattern, (sponsored, _))) () =
   match id_opt, sponsored with
   | None, None
   | None, Some false->
-     begin
-       match search_pattern with
-       | None ->
-	  D.get_all_users ()
-	  >>= fun users ->
-	  send_json
-	    ~code:200
-	    (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
-       | Some pattern ->
-	    D.search_user pattern
-	    >>= fun users ->
-	    send_json
-	      ~code:200
-	      (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
-     end
+    begin
+      match search_pattern with
+      | None ->
+        D.get_all_users ()
+        >>= fun users ->
+        send_json
+          ~code:200
+          (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
+      | Some pattern ->
+        D.search_user pattern
+        >>= fun users ->
+        send_json
+          ~code:200
+          (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
+    end
   | _, Some true ->
-     D.get_sponsored_users true
-     >>= fun users ->
-     send_json
-       ~code:200
-       (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
+    D.get_sponsored_users true
+    >>= fun users ->
+    send_json
+      ~code:200
+      (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
   | Some id, _ ->
-     (
+    (
       D.find_user_username id
       >>= function
       | Some u ->
@@ -503,3 +510,10 @@ let () =
       ()
   in
   Eliom_registration.Any.register ~service users_put_handler;
+
+  let service =
+    Eliom_service.Http.service
+      ~path:["incidents"]
+      ~get_params:any
+      () in
+  Eliom_registration.Any.register ~service incidents_get_handler;
