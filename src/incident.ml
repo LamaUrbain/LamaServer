@@ -2,8 +2,8 @@ type t =
   {
     name : string;
     id : int32;
-    begin_ : Calendar.t;
-    end_ : Calendar.t option;
+    begin_ : Calendar.t [@key "begin"];
+    end_ : Calendar.t option [@key "end"];
     position : Request_data.coord;
   } [@@deriving yojson]
 
