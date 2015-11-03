@@ -25,8 +25,8 @@ val get_all_itineraries : unit -> Result_data.itinerary list Lwt.t
 
 val create_incident :
   name:string ->
-  begin_:CalendarLib.Calendar.t ->
-  end_:CalendarLib.Calendar.t option ->
+  begin_:Calendar.t ->
+  end_:Calendar.t option ->
   position:Request_data.coord ->
   Incident.t option Lwt.t
 val delete_incident : int32 -> unit Lwt.t
