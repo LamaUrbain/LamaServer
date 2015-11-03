@@ -1,7 +1,9 @@
 type t = CalendarLib.Calendar.t
 
+let to_string =  CalendarLib.Printer.Calendar.to_string
+
 let to_yojson (date : t) =
-  let date_string = CalendarLib.Printer.Calendar.to_string date in
+  let date_string = to_string date in
   Yojson.Safe.from_string date_string
 
 let of_yojson (date : Yojson.Safe.json) =

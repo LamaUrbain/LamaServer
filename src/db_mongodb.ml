@@ -366,11 +366,12 @@ let get_all_itineraries _ =
 
 let incidents_collection = get_collection "incidents"
 
-let create_incident ~name ~begin_ ~end_ ~position =
+let create_incident ~name ~end_ ~position =
   let id =
     gen_id()
     |> Int32.of_int
   in
+  let begin_ = CalendarLib.Calendar.now () in
   let doc =
     empty
     |> Bson.add_element "id" @@ Bson.create_int32 id

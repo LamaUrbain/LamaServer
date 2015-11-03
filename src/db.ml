@@ -28,7 +28,6 @@ sig
 
   val create_incident :
     name:string ->
-    begin_:Calendar.t ->
     end_:Calendar.t option ->
     position:Request_data.coord ->
     Incident.t option Lwt.t

@@ -294,7 +294,7 @@ let incidents_table =
   (<:table< incidents_table (
     id integer NOT NULL DEFAULT(nextval $incidents_id_seq$),
     name text NOT NULL,
-    begin_ timestamp NOT NULL,
+    begin_ timestamp NOT NULL DEFAULT(localtimestamp ()),
     end_ timestamp,
     position integer NOT NULL
    ) >>)
@@ -315,14 +315,14 @@ let get_incident id =
   Db.view_one (<:view< t | t in $incidents_table$; t.id = $int32:id$ >>)
   >>= to_incident >>= fun s -> Lwt.return(Some(s))
 
-let create_incident ~name ~begin_ ~end_ ~position =
+let create_incident ~name ~end_ ~position =
   Db.value (<:value< $incidents_table$?id >>) >>= fun incident_id ->
   create_coord position >>= fun position_id ->
   Db.query
     (<:insert< $incidents_table$ := {
        id = $int32:incident_id$;
        name = $string:name$;
-       begin_ =  $timestamp:begin_$;
+       begin_ = $incidents_table$?begin_;
        end_ = of_option $Option.map Sql.Value.timestamp end_$;
        position = $int32:position_id$;
     } >>)
