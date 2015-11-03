@@ -6,7 +6,7 @@ let from_string = CalendarLib.Printer.Calendar.from_string
 
 let to_yojson (date : t) =
   let date_string = to_string date in
-  Yojson.Safe.from_string date_string
+  `String date_string
 
 let of_yojson (date : Yojson.Safe.json) =
   try
