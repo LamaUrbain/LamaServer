@@ -72,7 +72,7 @@ CREATE TABLE incidents_table (
   name dom_name,
   begin_ timestamp NOT NULL default CURRENT_timestamp,
   end_ timestamp NOT NULL,
-  position integer NOT NULL REFERENCES coords_table ON DELETE CASCADE,
+  position integer NOT NULL REFERENCES coords_table ON DELETE CASCADE
 );
 
 ALTER TABLE incidents_table OWNER TO lamaurbain;
