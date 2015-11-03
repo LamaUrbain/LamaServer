@@ -32,12 +32,57 @@ let read_raw_content ?(length = 4096) raw_content =
   let content_stream = Ocsigen_stream.get raw_content in
   Ocsigen_stream.string_of_stream length content_stream
 
+let coord_of_param address loc =
+   let rex = Pcre.regexp "^([-+]?\\d{1,2}([.]\\d+)?),\\s*([-+]?\\d{1,3}([.]\\d+)?)$" in
+    let latlong = match Pcre.pmatch ~rex loc with
+    | true -> Pcre.split ~rex:(Pcre.regexp ",") loc
+    | false -> assert false in
+    let (lat, long) = float_of_string (List.nth latlong 0), float_of_string (List.nth latlong 1) in
+    {latitude = lat; longitude = long; address = address}
+
+let get_token_user t =
+  Option.map_default
+    (fun token ->D.find_session token >>= (fun s -> Lwt.return @@ Option.map (fun x -> x.Sessions.owner) s))
+    (Lwt.return None) t
+
+let wrap_body_json f get (content_type, raw_content_opt) =
+  if not (check_content_type ~mime_type:json_mime_type content_type) then
+    send_error ~code:400 "Content-type is wrong, it must be JSON"
+  else
+    match raw_content_opt with
+    | None ->
+        send_error ~code:400 "Body content is missing"
+    | Some raw_content ->
+        read_raw_content raw_content >>= f get
+
+let wrap_errors f = function
+  | `Ok x -> f x
+  | `Error x -> send_error ~code:400 ("Provided JSON is not valid: " ^ x)
+
 let incidents_get_handler _ () =
   D.get_all_incidents ()
     >>= fun incidents ->
         send_json
           ~code:200
           (Yojson.Safe.to_string (Incident.incidents_response_to_yojson (List.map Incident.to_response incidents)))
+
+let incident_post_handler _ (name ,(address, (position, (end_, _))))  =
+  let end_ = BatOption.map Calendar.from_string end_ in
+  let position = coord_of_param (Some address) position in
+  let incident = {name;position;end_} in
+  wrap_errors
+    (fun incident ->
+       D.create_incident
+         ~name:incident.name
+         ~position:incident.position
+         ~end_:incident.end_
+       >>= fun i ->
+       match i with
+       | None -> Lwt.fail_with "There was an incident"
+       | Some inc ->
+         Lwt.return inc >>= (fun i ->
+         send_success ~content:(Yojson.Safe.to_string (Incident.to_yojson (Incident.to_response i))) ()
+           )) (`Ok incident)
 
 let user_get_handler (id_opt, (search_pattern, (sponsored, _))) () =
   match id_opt, sponsored with
@@ -78,24 +123,6 @@ let user_get_handler (id_opt, (search_pattern, (sponsored, _))) () =
           ("User not found")
     )
 
-let get_token_user t =
-  Option.map_default
-    (fun token ->D.find_session token >>= (fun s -> Lwt.return @@ Option.map (fun x -> x.Sessions.owner) s))
-    (Lwt.return None) t
-
-let wrap_body_json f get (content_type, raw_content_opt) =
-  if not (check_content_type ~mime_type:json_mime_type content_type) then
-    send_error ~code:400 "Content-type is wrong, it must be JSON"
-  else
-    match raw_content_opt with
-    | None ->
-        send_error ~code:400 "Body content is missing"
-    | Some raw_content ->
-        read_raw_content raw_content >>= f get
-
-let wrap_errors f = function
-  | `Ok x -> f x
-  | `Error x -> send_error ~code:400 ("Provided JSON is not valid: " ^ x)
 
 let user_post_handler _ (username ,(password, (email, (sponsor, _))))  =
     let user = {username;password;email} in
@@ -204,13 +231,6 @@ let sessions_delete_handler (token, _) _ =
 
 open Eliom_parameter
 
-let coord_of_param address loc =
-   let rex = Pcre.regexp "^([-+]?\\d{1,2}([.]\\d+)?),\\s*([-+]?\\d{1,3}([.]\\d+)?)$" in
-    let latlong = match Pcre.pmatch ~rex loc with
-    | true -> Pcre.split ~rex:(Pcre.regexp ",") loc
-    | false -> assert false in
-    let (lat, long) = float_of_string (List.nth latlong 0), float_of_string (List.nth latlong 1) in
-    {latitude = lat; longitude = long; address = address}
 
 let () =
 
@@ -517,3 +537,14 @@ let () =
       ~get_params:any
       () in
   Eliom_registration.Any.register ~service incidents_get_handler;
+
+  let service =
+    Eliom_service.Http.post_service
+      ~fallback:service
+      ~post_params:(string "name"
+                    ** (string "address")
+                    ** (string "position")
+                    ** (neopt (string "end")) ** any)
+      ()
+  in
+  Eliom_registration.Any.register ~service incident_post_handler;

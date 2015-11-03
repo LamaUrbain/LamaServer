@@ -45,7 +45,6 @@ end
 type incident_creation =
   {
     name : string;
-    begin_ : string;
-    end_ : string option;
+    end_ : Calendar.t option;
     position : coord;
   } [@@deriving yojson]
