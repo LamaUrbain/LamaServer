@@ -17,6 +17,7 @@ Library "LamaUrbain"
     Config,
     Site_services,
     Site_registration,
+    Incident,
     Users,
     Sessions,
     Utils,
