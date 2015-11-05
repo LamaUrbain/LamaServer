@@ -185,7 +185,8 @@ let itineraries_table =
     creation timestamp NOT NULL DEFAULT(localtimestamp ()),
     favorite boolean,
     departure integer NOT NULL,
-    destinations int32_array NOT NULL
+    destinations int32_array NOT NULL,
+    vehicle integer NOT NULL
    ) >>)
 
 let coords_id_seq = (<:sequence< serial "coords_id_seq" >>)
@@ -221,6 +222,7 @@ let to_itinerary itinerary =
   ; favorite = itinerary#?favorite
   ; departure
   ; destinations
+  ; vehicle = itinerary#!vehicle
   }
 
 let get_itinerary id =
@@ -239,7 +241,7 @@ let create_coord coord =
   >|= fun () ->
   id
 
-let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
+let create_itinerary ~owner ~name ~favorite ~departure ~destinations ~vehicle =
   Db.value (<:value< $itineraries_table$?id >>) >>= fun itinerary_id ->
   create_coord departure >>= fun departure_id ->
   Lwt_list.map_s create_coord destinations >>= fun destinations -> (* TODO: PARALLEL ? *)
@@ -253,6 +255,7 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
       favorite = of_option $Option.map Sql.Value.bool favorite$;
       departure = $int32:departure_id$;
       destinations = $int32_array:destinations$;
+      vehicle = $int32:vehicle$
     } >>)
   >>= fun () ->
   get_itinerary itinerary_id
@@ -268,6 +271,7 @@ let update_itinerary itinerary =
       favorite = of_option $Option.map Sql.Value.bool itinerary.Result_data.favorite$;
       departure = $int32:departure_id$;
       destinations = $int32_array:destinations$;
+      vehicle = $int32: itinerary.Result_data.vehicle$;
     } | t.id = $int32:itinerary.Result_data.id$ >>)
 
 let edit_user ~id ~username ~password ~email ~sponsor =

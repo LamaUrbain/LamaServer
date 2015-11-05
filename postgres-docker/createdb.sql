@@ -60,7 +60,8 @@ CREATE TABLE itineraries_table (
   favorite boolean,
   departure integer NOT NULL REFERENCES coords_table ON DELETE CASCADE,
   creation timestamp NOT NULL,
-  destinations integer[] NOT NULL -- REFERENCES coords_table ON DELETE CASCADE
+  destinations integer[] NOT NULL, -- REFERENCES coords_table ON DELETE CASCADE
+  vehicle integer NOT NULL
 );
 ALTER TABLE itineraries_table OWNER TO lamaurbain;
 

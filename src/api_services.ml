@@ -236,10 +236,10 @@ let () =
 
   let dummy_handler _ _ = Eliom_registration.String.send ~code:201 ("", "") in
 
-  let itinerary_post_handler _ (departure, (departure_address, (destination_address, (favorite, (destination, (name, (token, _))))))) =
+  let itinerary_post_handler _ (departure, (departure_address, (destination_address, (favorite, (destination, (vehicle, (name, (token, _)))))))) =
     let destination = BatOption.map (coord_of_param destination_address) destination in
     let departure = coord_of_param departure_address departure in
-    let coords : Request_data.itinerary_creation = {destination; departure; favorite; name} in
+    let coords : Request_data.itinerary_creation = {destination; departure; favorite; name; vehicle} in
       wrap_errors
         (fun coords ->
 	 get_token_user token >>= (fun owner ->
@@ -256,12 +256,12 @@ let () =
     send_json ~code:200 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
   in
 
-  let itinerary_put_handler (id, (departure, (departure_address, (favorite, (name, (token, any)))))) _ =
+  let itinerary_put_handler (id, (departure, (departure_address, (favorite, (name, (vehicle, (token, any))))))) _ =
     check_itinerary_ownership id token >>= fun it ->
     match it with
     | Answer _ -> (
       let departure = BatOption.map (coord_of_param departure_address) departure in
-      let coords : Request_data.itinerary_edition = {departure; favorite; name} in
+      let coords : Request_data.itinerary_edition = {departure; favorite; name; vehicle} in
       wrap_errors
       (fun coords ->
        Itinerary.edit coords id >>= fun itinerary ->
@@ -386,6 +386,7 @@ let () =
 		    ** opt (string "destination_address")
                     ** opt (bool "favorite")
                     ** opt (string "destination")
+                    ** int32 "vehicle"
                     ** opt (string "name")
                     ** opt (string "token")
 		    ** any
@@ -403,6 +404,7 @@ let () =
 		      ** opt (string "departure_address")
                       ** opt (bool "favorite")
                       ** opt (string "name")
+                      ** opt (int32 "vehicle")
                       ** opt (string "token")
 		      ** any
                      )

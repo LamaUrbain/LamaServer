@@ -15,6 +15,7 @@ type itinerary_creation =
   ; departure : coord
   ; destination : coord option
   ; favorite : bool option
+  ; vehicle : int32
   } [@@deriving yojson]
 
 type get_all =
@@ -28,6 +29,7 @@ type itinerary_edition =
   { name : string option
   ; departure : coord option
   ; favorite : bool option
+  ; vehicle : int32 option
   } [@@deriving yojson]
 
 type destination_addition =
