@@ -207,26 +207,26 @@ let sessions_delete_handler (token, _) _ =
      >>= fun s -> send_success ~content:"" ()
     ) (`Ok ())
 
-    let check_itinerary_ownership itinerary token =
-    D.get_itinerary itinerary >>= fun i ->
-    match i with
-    | Some itinerary ->
+let check_itinerary_ownership itinerary token =
+  D.get_itinerary itinerary >>= fun i ->
+  match i with
+  | Some itinerary ->
     begin
       if BatOption.default false itinerary.favorite then
-      (
-        match token with
-        | Some t -> (
-          D.find_session t >>= fun s ->
-          match s with
-          | Some session -> if BatOption.is_some @@ BatOption.map ((=) session.owner) itinerary.owner
-          then Lwt.return(Answer(itinerary))
-        else Lwt.return(Error("User not allowed to edit this itinerary"))
-        | None -> Lwt.return(Error("Invalid Session"))
-      )
-        | None -> if Option.is_none itinerary.owner then Lwt.return(Error("No token provided")) else Lwt.return(Answer(itinerary))
-      )
-    else Lwt.return(Answer(itinerary))
-  end
+        (
+          match token with
+          | Some t -> (
+              D.find_session t >>= fun s ->
+              match s with
+              | Some session -> if BatOption.is_some @@ BatOption.map ((=) session.owner) itinerary.owner
+                then Lwt.return(Answer(itinerary))
+                else Lwt.return(Error("User not allowed to edit this itinerary"))
+              | None -> Lwt.return(Error("Invalid Session"))
+            )
+          | None -> if Option.is_none itinerary.owner then  Lwt.return(Answer(itinerary)) else Lwt.return(Error("No token provided"))
+        )
+      else Lwt.return(Answer(itinerary))
+    end
   | None -> Lwt.return(Error("Itinerary not found"))
 
 open Eliom_parameter
