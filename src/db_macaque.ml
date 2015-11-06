@@ -330,8 +330,13 @@ let create_incident ~name ~end_ ~position =
 let delete_incident id =
   Db.query (<:delete< t in $incidents_table$ | t.id = $int32:id$ >>)
 
+let filter_date (elt : Incident.t) =
+  let now = CalendarLib.Calendar.now () in
+  match elt.end_ with
+  | Some date -> if (CalendarLib.Calendar.compare date now) > 0 then
+      Lwt.return true else Lwt.return false
+  | None -> Lwt.return true
+
 let get_all_incidents () =
-  let now = <:value< localtimestamp () >> in
-  Db.view(<:view< t | t in $incidents_table$;
-                  t.end_ = null || t.end_ > now >>)
-  >>= Lwt_list.map_s to_incident
+  Db.view(<:view< t | t in $incidents_table$; >>)
+  >>= Lwt_list.map_s to_incident >>= Lwt_list.filter_s filter_date
