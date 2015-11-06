@@ -68,7 +68,7 @@ let incidents_get_handler _ () =
 
 let incident_post_handler _ (name ,(address, (position, (end_, _))))  =
   let end_ = BatOption.map Calendar.from_string end_ in
-  let position = coord_of_param (Some address) position in
+  let position = coord_of_param address position in
   let incident = {name;position;end_} in
   wrap_errors
     (fun incident ->
@@ -542,7 +542,7 @@ let () =
     Eliom_service.Http.post_service
       ~fallback:service
       ~post_params:(string "name"
-                    ** (string "address")
+                    ** (neopt (string "address"))
                     ** (string "position")
                     ** (neopt (string "end")) ** any)
       ()
