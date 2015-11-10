@@ -386,7 +386,7 @@ let () =
 		    ** opt (string "destination_address")
                     ** opt (bool "favorite")
                     ** opt (string "destination")
-                    ** int32 "vehicle"
+                    ** opt (int32 "vehicle")
                     ** opt (string "name")
                     ** opt (string "token")
 		    ** any

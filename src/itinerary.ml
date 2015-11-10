@@ -180,6 +180,7 @@ let () =
     failwith "DB init failed"
 
 let create ?owner {Request_data.name; departure; destination; favorite; vehicle} =
+  let vehicle = Option.default 0l vehicle in
   let destinations = match destination with
     | Some destination ->
         ItineraryCache.add ~vehicle (departure, destination);
