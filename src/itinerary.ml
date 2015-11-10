@@ -46,7 +46,7 @@ module Cpp : sig
   type itinerary
 
   val init : string -> string -> bool
-  val create_point : float -> float -> int32 -> point option
+  val create_point : float -> float -> point option
   val create : point -> point -> int32 -> itinerary option
   val get_magnification : Unsigned.UInt32.t -> magnification
   val iter_coordinates : itinerary -> magnification -> (Unsigned.Size_t.t -> Unsigned.Size_t.t -> unit) -> unit
@@ -66,7 +66,7 @@ end = struct
     foreign "init" (string @-> string @-> returning bool)
 
   let create_point =
-    foreign "createPoint" (float @-> float @-> int32_t @-> returning (ptr_opt void))
+    foreign "createPoint" (float @-> float @-> returning (ptr_opt void))
 
   let create =
     foreign "createItinerary" (ptr void @-> ptr void @-> int32_t @-> returning (ptr_opt void))
@@ -105,7 +105,7 @@ let cache = new Cache.cache (assert false) 500
 *)
 
 module PointCache : sig
-  val find : vehicle:int32 -> Request_data.coord -> Cpp.point
+  val find : Request_data.coord -> Cpp.point
 end = struct
   module H = Hashtbl.Make(struct
       type t = Request_data.coord
@@ -120,7 +120,7 @@ end = struct
 
   let self = H.create 16
 
-  let find ~vehicle k =
+  let find k =
     match H.find self k with
     | point ->
         point
@@ -130,7 +130,7 @@ end = struct
         let point =
           Option.default_delayed
             (fun () -> assert false)
-            (Cpp.create_point latitude longitude vehicle)
+            (Cpp.create_point latitude longitude)
         in
         H.add self k point;
         point
@@ -161,8 +161,8 @@ end = struct
     | itinerary ->
         itinerary
     | exception Not_found ->
-        let departure_point = PointCache.find ~vehicle departure in
-        let destination_point = PointCache.find ~vehicle destination in
+        let departure_point = PointCache.find departure in
+        let destination_point = PointCache.find destination in
         let itinerary =
           Option.default_delayed
             (fun () -> assert false)

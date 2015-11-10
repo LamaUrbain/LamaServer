@@ -81,7 +81,7 @@ bool init(char* map, char* style) {
     return true;
 }
 
-static osmscout::Vehicle getVehicle(int vehicleIdx) {
+static osmscout::Vehicle getVehicle(int32_t vehicleIdx) {
     switch (vehicleIdx) {
     case 0:
         return osmscout::vehicleFoot;
@@ -163,7 +163,7 @@ struct Point* createPoint(float lat, float lon) {
 }
 
 extern "C"
-struct Itinerary* createItinerary(const struct Point* start, const struct Point* target, int vehicleIdx) {
+struct Itinerary* createItinerary(const struct Point* start, const struct Point* target, int32_t vehicleIdx) {
     auto way = new osmscout::Way;
     auto result = new Itinerary;
     osmscout::RouteData data;
