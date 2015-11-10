@@ -20,6 +20,7 @@ sig
     favorite:bool option ->
     departure:Request_data.coord ->
     destinations:Request_data.coord list ->
+    vehicle:int32 ->
     Result_data.itinerary option Lwt.t
   val update_itinerary : Result_data.itinerary -> unit Lwt.t
   val delete_itinerary : int32 -> unit Lwt.t

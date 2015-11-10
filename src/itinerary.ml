@@ -46,8 +46,8 @@ module Cpp : sig
   type itinerary
 
   val init : string -> string -> bool
-  val create_point : float -> float -> point option
-  val create : point -> point -> itinerary option
+  val create_point : float -> float -> int32 -> point option
+  val create : point -> point -> int32 -> itinerary option
   val get_magnification : Unsigned.UInt32.t -> magnification
   val iter_coordinates : itinerary -> magnification -> (Unsigned.Size_t.t -> Unsigned.Size_t.t -> unit) -> unit
   val create_map_data : unit -> map_data
@@ -66,10 +66,10 @@ end = struct
     foreign "init" (string @-> string @-> returning bool)
 
   let create_point =
-    foreign "createPoint" (float @-> float @-> returning (ptr_opt void))
+    foreign "createPoint" (float @-> float @-> int32_t @-> returning (ptr_opt void))
 
   let create =
-    foreign "createItinerary" (ptr void @-> ptr void @-> returning (ptr_opt void))
+    foreign "createItinerary" (ptr void @-> ptr void @-> int32_t @-> returning (ptr_opt void))
 
   let get_magnification =
     foreign "getMagnification" (uint32_t @-> returning (ptr void))
@@ -105,7 +105,7 @@ let cache = new Cache.cache (assert false) 500
 *)
 
 module PointCache : sig
-  val find : Request_data.coord -> Cpp.point
+  val find : vehicle:int32 -> Request_data.coord -> Cpp.point
 end = struct
   module H = Hashtbl.Make(struct
       type t = Request_data.coord
@@ -120,7 +120,7 @@ end = struct
 
   let self = H.create 16
 
-  let find k =
+  let find ~vehicle k =
     match H.find self k with
     | point ->
         point
@@ -130,15 +130,15 @@ end = struct
         let point =
           Option.default_delayed
             (fun () -> assert false)
-            (Cpp.create_point latitude longitude)
+            (Cpp.create_point latitude longitude vehicle)
         in
         H.add self k point;
         point
 end
 
 module ItineraryCache : sig
-  val find : (Request_data.coord * Request_data.coord) -> Cpp.itinerary
-  val add : (Request_data.coord * Request_data.coord) -> unit
+  val find : vehicle:int32 -> (Request_data.coord * Request_data.coord) -> Cpp.itinerary
+  val add : vehicle:int32 -> (Request_data.coord * Request_data.coord) -> unit
 end = struct
   module H = Hashtbl.Make(struct
       type t = (Request_data.coord * Request_data.coord)
@@ -156,22 +156,22 @@ end = struct
 
   let self = H.create 16
 
-  let find ((departure, destination) as path) =
+  let find ~vehicle ((departure, destination) as path) =
     match H.find self path with
     | itinerary ->
         itinerary
     | exception Not_found ->
-        let departure_point = PointCache.find departure in
-        let destination_point = PointCache.find destination in
+        let departure_point = PointCache.find ~vehicle departure in
+        let destination_point = PointCache.find ~vehicle destination in
         let itinerary =
           Option.default_delayed
             (fun () -> assert false)
-            (Cpp.create departure_point destination_point)
+            (Cpp.create departure_point destination_point vehicle)
         in
         H.add self path itinerary;
         itinerary
 
-  let add path = ignore (find path)
+  let add ~vehicle path = ignore (find ~vehicle path)
 end
 
 let () =
@@ -179,10 +179,10 @@ let () =
   if not (Cpp.init map style) then
     failwith "DB init failed"
 
-let create ?owner {Request_data.name; departure; destination; favorite} =
+let create ?owner {Request_data.name; departure; destination; favorite; vehicle} =
   let destinations = match destination with
     | Some destination ->
-        ItineraryCache.add (departure, destination);
+        ItineraryCache.add ~vehicle (departure, destination);
         [destination]
     | None ->
         []
@@ -193,6 +193,7 @@ let create ?owner {Request_data.name; departure; destination; favorite} =
     ~favorite
     ~departure
     ~destinations
+    ~vehicle
 
 let rec waypoints_iter f = function
   | [] -> ()
@@ -200,8 +201,9 @@ let rec waypoints_iter f = function
   | x::((y::_) as xs) -> f (x, y); waypoints_iter f xs
 
 let recache_itineraries itinerary =
+  let vehicle = itinerary.Result_data.vehicle in
   waypoints_iter
-    ItineraryCache.add
+    (ItineraryCache.add ~vehicle)
     (itinerary.Result_data.departure :: itinerary.Result_data.destinations)
 
 let get_coordinates ~zoom id =
@@ -212,7 +214,8 @@ let get_coordinates ~zoom id =
     let set = Hashtbl.create 512 in
     waypoints_iter
       (fun path ->
-         let itinerary = ItineraryCache.find path in
+         let vehicle = itinerary.Result_data.vehicle in
+         let itinerary = ItineraryCache.find ~vehicle path in
          let aux x y = Hashtbl.replace set (x, y) () in
         Cpp.iter_coordinates itinerary magnification aux;
       )
@@ -231,7 +234,8 @@ let get_image ~x ~y ~z id =
   let map_data = Cpp.create_map_data () in
   waypoints_iter
     (fun path ->
-       let itinerary = ItineraryCache.find path in
+       let vehicle = itinerary.Result_data.vehicle in
+       let itinerary = ItineraryCache.find ~vehicle path in
        Cpp.add_map_data map_data itinerary;
     )
     (itinerary.Result_data.departure :: itinerary.Result_data.destinations);
@@ -296,8 +300,9 @@ let get_all {Request_data.search; owner; favorite; ordering} =
   in
   Lwt.return itineraries
 
-let edit {Request_data.name; departure; favorite} id =
+let edit {Request_data.name; departure; favorite; vehicle} id =
   get id >>= fun itinerary ->
+  let vehicle = Option.default itinerary.Result_data.vehicle vehicle in
   let itinerary = match name with
     | None -> itinerary
     | Some name -> {itinerary with Result_data.name = Some name} (* TODO *)
@@ -308,7 +313,7 @@ let edit {Request_data.name; departure; favorite} id =
     | Some departure ->
         begin match itinerary.Result_data.destinations with
         | [] -> ()
-        | destination::_ -> ItineraryCache.add (departure, destination)
+        | destination::_ -> ItineraryCache.add ~vehicle (departure, destination)
         end;
         {itinerary with Result_data.departure}
   in

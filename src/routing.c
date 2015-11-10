@@ -57,8 +57,6 @@ static const double DPI=96.0;
 
 static osmscout::DatabaseRef g_database = NULL;
 static osmscout::StyleConfigRef g_styleConfig = NULL;
-static osmscout::Vehicle g_vehicle = osmscout::vehicleCar;
-static osmscout::FastestPathRoutingProfileRef g_routingProfile = NULL;
 
 extern "C"
 bool init(char* map, char* style) {
@@ -80,29 +78,45 @@ bool init(char* map, char* style) {
         return false;
     }
 
-    // Router profile
-    osmscout::TypeConfigRef typeConfig = g_database->GetTypeConfig();
-    g_routingProfile = osmscout::FastestPathRoutingProfileRef(new osmscout::FastestPathRoutingProfile(typeConfig));
+    return true;
+}
 
-    switch (g_vehicle) {
+static osmscout::Vehicle getVehicle(int vehicleIdx) {
+    switch (vehicleIdx) {
+    case 0:
+        return osmscout::vehicleFoot;
+    case 1:
+        return osmscout::vehicleBicycle;
+    case 2:
+        return osmscout::vehicleCar;
+    default:
+        return osmscout::vehicleFoot;
+    }
+}
+
+static osmscout::FastestPathRoutingProfileRef getRoutingProfile(osmscout::Vehicle vehicle) {
+    osmscout::TypeConfigRef typeConfig = g_database->GetTypeConfig();
+    osmscout::FastestPathRoutingProfileRef routingProfile = osmscout::FastestPathRoutingProfileRef(new osmscout::FastestPathRoutingProfile(typeConfig));
+
+    switch (vehicle) {
     case osmscout::vehicleFoot:
-        g_routingProfile->ParametrizeForFoot(*typeConfig, 5.0);
+        routingProfile->ParametrizeForFoot(*typeConfig, 5.0);
         break;
     case osmscout::vehicleBicycle:
-        g_routingProfile->ParametrizeForBicycle(*typeConfig, 20.0);
+        routingProfile->ParametrizeForBicycle(*typeConfig, 20.0);
         break;
     case osmscout::vehicleCar:
         std::map<std::string, double> carSpeedTable;
 
         GetCarSpeedTable(carSpeedTable);
-        g_routingProfile->ParametrizeForCar(*typeConfig, carSpeedTable, 160.0);
+        routingProfile->ParametrizeForCar(*typeConfig, carSpeedTable, 160.0);
         break;
     }
 
-    return true;
+    return routingProfile;
 }
 
-static osmscout::RoutingServiceRef getRouter() {
+static osmscout::RoutingServiceRef getRouter(osmscout::Vehicle vehicle) {
     bool outputGPX = false;
     osmscout::RouterParameter routerParameter;
 
@@ -110,7 +124,7 @@ static osmscout::RoutingServiceRef getRouter() {
         routerParameter.SetDebugPerformance(true);
     }
 
-    osmscout::RoutingServiceRef router(new osmscout::RoutingService(g_database, routerParameter, g_vehicle));
+    osmscout::RoutingServiceRef router(new osmscout::RoutingService(g_database, routerParameter, vehicle));
 
     if (!router->Open()) {
         std::cerr << "Cannot open routing database" << std::endl;
@@ -126,13 +140,14 @@ struct Point* createPoint(float lat, float lon) {
     size_t nodeIndex;
     auto result = new Point;
 
-    auto router = getRouter();
+    auto vehicle = osmscout::vehicleFoot;
+    auto router = getRouter(vehicle);
 
     if (router == NULL) {
         return NULL;
     }
 
-    if (!router->GetClosestRoutableNode(lat, lon, g_vehicle, 1000, object, nodeIndex)) {
+    if (!router->GetClosestRoutableNode(lat, lon, vehicle, 1000, object, nodeIndex)) {
         std::cerr << "Error while searching for routing node near location !" << std::endl;
         return NULL;
     }
@@ -148,21 +163,20 @@ struct Point* createPoint(float lat, float lon) {
 }
 
 extern "C"
-struct Itinerary* createItinerary(const struct Point* start, const struct Point* target) {
-    std::cerr << start << std::endl;
-    std::cerr << target << std::endl;
-
+struct Itinerary* createItinerary(const struct Point* start, const struct Point* target, int vehicleIdx) {
     auto way = new osmscout::Way;
     auto result = new Itinerary;
     osmscout::RouteData data;
 
-    auto router = getRouter();
+    auto vehicle = getVehicle(vehicleIdx);
+    auto routingProfile = getRoutingProfile(vehicle);
+    auto router = getRouter(vehicle);
 
     if (router == NULL) {
         return NULL;
     }
 
-    if (!router->CalculateRoute(*g_routingProfile, start->object, start->nodeIndex, target->object, target->nodeIndex, data)) {
+    if (!router->CalculateRoute(*routingProfile, start->object, start->nodeIndex, target->object, target->nodeIndex, data)) {
         std::cerr << "There was an error while calculating the route!" << std::endl;
         return NULL;
     }

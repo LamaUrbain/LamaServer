@@ -219,7 +219,7 @@ let get_coord doc =
     }
   |> Lwt.return
 
-let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
+let create_itinerary ~owner ~name ~favorite ~departure ~destinations ~vehicle =
   let id =
     gen_id()
     |> Int32.of_int
@@ -246,6 +246,7 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
         List.map (fun x -> Bson.create_doc_element @@ create_coord x) destinations
         |> Bson.create_list
       )
+    |> Bson.add_element "vehicle" (Bson.create_int32 vehicle)
   in
   Mongo.insert (Lazy.force itineraries_collection) [doc];
   Result_data.{
@@ -256,6 +257,7 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
     favorite;
     departure;
     destinations;
+    vehicle;
   }
   |> (fun i -> Lwt.return (Some i))
 
@@ -297,6 +299,7 @@ let update_itinerary (itinerary : Result_data.itinerary) =
         List.map (fun x -> create_coord x |> Bson.create_doc_element) itinerary.destinations
         |> Bson.create_list
       )
+    |> Bson.add_element "vehicle" (Bson.create_int32 itinerary.vehicle)
   in
   Mongo.update_one (Lazy.force itineraries_collection) (query,doc)
   |> Lwt.return
@@ -341,6 +344,7 @@ let _get_itinerary doc =
            with _ -> None);
         departure;
         destinations;
+        vehicle = Bson.get_element "vehicle" doc |> Bson.get_int32;
       }
     |> Lwt.return
 

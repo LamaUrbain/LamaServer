@@ -6,4 +6,5 @@ type itinerary =
   ; favorite : bool option
   ; departure : Request_data.coord
   ; destinations : Request_data.coord list
+  ; vehicle : int32
   } [@@deriving yojson]
