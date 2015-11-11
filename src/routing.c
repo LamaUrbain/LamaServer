@@ -140,7 +140,7 @@ struct Point* createPoint(float lat, float lon) {
     size_t nodeIndex;
     auto result = new Point;
 
-    auto vehicle = osmscout::vehicleFoot;
+    auto vehicle = osmscout::vehicleCar;
     auto router = getRouter(vehicle);
 
     if (router == NULL) {
