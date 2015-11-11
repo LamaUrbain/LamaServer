@@ -266,22 +266,21 @@ let update_itinerary itinerary =
   let destinations = List.map Option.some destinations in
   Db.query
     (<:update< t in $itineraries_table$ := {
-      owner = of_option $Option.map Sql.Value.string itinerary.Result_data.owner$;
-      name = of_option $Option.map Sql.Value.string itinerary.Result_data.name$;
-      favorite = of_option $Option.map Sql.Value.bool itinerary.Result_data.favorite$;
+      owner = $Option.map_default Sql.Value.string$ t.owner $itinerary.Result_data.owner$;
+      name = $Option.map_default Sql.Value.string$ t.name $itinerary.Result_data.name$;
+      favorite = $Option.map_default Sql.Value.bool$ t.favorite $itinerary.Result_data.favorite$;
       departure = $int32:departure_id$;
       destinations = $int32_array:destinations$;
       vehicle = $int32: itinerary.Result_data.vehicle$;
     } | t.id = $int32:itinerary.Result_data.id$ >>)
 
 let edit_user ~id ~username ~password ~email ~sponsor =
-  let map_default f x def = BatOption.map_default f def x in
   Db.query
     (<:update< t in $users_table$ := {
-      username = $map_default Sql.Value.string username$ t.username;
-      email = $map_default Sql.Value.string email$ t.email;
-      password = $map_default Sql.Value.string password$ t.password;
-      sponsor = $map_default Sql.Value.bool sponsor$ t.sponsor;
+      username = $Option.map_default Sql.Value.string$ t.username $username$;
+      email = $Option.map_default Sql.Value.string$ t.email $email$;
+      password = $Option.map_default Sql.Value.string$ t.password $password$;
+      sponsor = $Option.map_default Sql.Value.bool$ t.sponsor $sponsor$;
     } | t.username = $string:id$ >>)
 
 let delete_itinerary id =
