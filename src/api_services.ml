@@ -12,6 +12,10 @@ let (|>>) v f = v >>= fun value ->
   | None -> Lwt.fail_with "Error while unwrapping"
 
 let json_mime_type = "application/json"
+let xml_mime_type = "application/xml"
+
+let send_xml ~code xml =
+  Eliom_registration.String.send ~code (xml, xml_mime_type)
 
 let send_json ~code json =
   Eliom_registration.String.send ~code (json, json_mime_type)
@@ -137,6 +141,24 @@ let session_get_handler (token_opt, any) () =
           ~code:404
           ("User not found")
     )
+
+let gpx_get_handler (token_opt, any) () = match token_opt with
+     | None -> send_error ~code:404 "Missing token"
+     | Some token ->
+       D.find_session token
+       >>= function
+           | Some { Sessions.owner; _ } ->
+             Itinerary.get_all
+               (** XXX: delete this default value *)
+               { Request_data.owner = Some owner
+               ; search = None
+               ; favorite = None
+               ; ordering = None
+               }
+             >>= fun lst ->
+               let gpx = Gpx_encoding.to_gpx owner None lst |> Gpx.to_xml in
+               send_xml ~code:200 (Xml.to_string gpx)
+           | _ -> send_error ~code:404 ("User not found")
 
 let users_delete_handler (id, (token, any)) _ =
   D.find_user_username id >>= fun u ->
@@ -473,6 +495,23 @@ let () =
       ()
   in
   Eliom_registration.Any.register ~service session_post_handler;
+
+  let service =
+    Eliom_service.Http.service
+      ~path:["import"; ""]
+      ~get_params:(suffix_prod (neopt (string "token")) (any))
+      ()
+  in
+  Eliom_registration.Any.register ~service gpx_get_handler;
+
+  let service =
+     Eliom_service.Http.post_service
+       ~fallback:service
+       ~post_params:(string "input" ** (any))
+       ()
+  in
+  Eliom_registration.Any.register ~service
+    (fun _ (input, any) -> send_json ~code:200 "[]");
 
   let service =
     Eliom_service.Http.delete_service

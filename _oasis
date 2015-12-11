@@ -27,7 +27,8 @@ Library "LamaUrbain"
     Db_macaque,
     Db_macaque_wrapper,
     Api_services,
-    Itinerary
+    Itinerary,
+    Gpx_encoding
   CSources:
     routing.c
   BuildDepends:
@@ -39,7 +40,8 @@ Library "LamaUrbain"
     mongo,
     macaque,
     monomorphic,
-    ppx_deriving_yojson.runtime
+    ppx_deriving_yojson.runtime,
+    gpx
 #  CCOpt: `pkg-config --cflags libosmscout-map-cairo`
 #  CCLib: `pkg-config --libs libosmscout-map-cairo`
   CCOpt: -x c++ -pthread -std=c++0x -fopenmp -mmmx -msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -I/usr/local/include -I/usr/include/cairo -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/pixman-1 -I/usr/include/freetype2 -I/usr/include/libdrm -I/usr/include/libpng12 -I/usr/include/pango-1.0 -I/usr/include/cairo -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/pixman-1 -I/usr/include/freetype2 -I/usr/include/libdrm -I/usr/include/libpng12 -I/usr/local/include -Wall -Wextra

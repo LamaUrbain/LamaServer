@@ -15,7 +15,8 @@ RUN cd autoconf-2.69; ./configure; make; sudo make install
 ENV OPAMYES 1
 RUN opam init
 RUN eval `opam config env`; opam pin add -n macaque https://github.com/ocsigen/macaque.git
-RUN eval `opam config env`; opam install batteries eliom safepass oasis dbm mongo cairo2 macaque monomorphic ctypes ctypes-foreign batteries ppx_deriving_yojson
+RUN eval `opam config env`; opam pin add -n gpx https://github.com/LamaUrbain/ocaml-gpx.git
+RUN eval `opam config env`; opam install batteries eliom safepass oasis dbm mongo cairo2 macaque monomorphic ctypes ctypes-foreign batteries ppx_deriving_yojson gpx
 RUN git clone https://github.com/LamaUrbain/libosmscout
 RUN cd libosmscout; make full-install; cd Import; ./autogen.sh; ./configure; make
 RUN cd libosmscout/maps/; wget http://download.geofabrik.de/europe/france/picardie-latest.osm.pbf; LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib" ./build.sh picardie-latest.osm.pbf

@@ -12,3 +12,4 @@ PKG yojson
 PKG ppx_deriving_yojson
 PKG mongo
 PKG macaque
+PKG gpx
