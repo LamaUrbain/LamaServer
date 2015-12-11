@@ -185,7 +185,8 @@ let itineraries_table =
     creation timestamp NOT NULL DEFAULT(localtimestamp ()),
     favorite boolean,
     departure integer NOT NULL,
-    destinations int32_array NOT NULL
+    destinations int32_array NOT NULL,
+    vehicle integer NOT NULL
    ) >>)
 
 let coords_id_seq = (<:sequence< serial "coords_id_seq" >>)
@@ -221,6 +222,7 @@ let to_itinerary itinerary =
   ; favorite = itinerary#?favorite
   ; departure
   ; destinations
+  ; vehicle = itinerary#!vehicle
   }
 
 let get_itinerary id =
@@ -239,7 +241,7 @@ let create_coord coord =
   >|= fun () ->
   id
 
-let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
+let create_itinerary ~owner ~name ~favorite ~departure ~destinations ~vehicle =
   Db.value (<:value< $itineraries_table$?id >>) >>= fun itinerary_id ->
   create_coord departure >>= fun departure_id ->
   Lwt_list.map_s create_coord destinations >>= fun destinations -> (* TODO: PARALLEL ? *)
@@ -253,6 +255,7 @@ let create_itinerary ~owner ~name ~favorite ~departure ~destinations =
       favorite = of_option $Option.map Sql.Value.bool favorite$;
       departure = $int32:departure_id$;
       destinations = $int32_array:destinations$;
+      vehicle = $int32:vehicle$
     } >>)
   >>= fun () ->
   get_itinerary itinerary_id
@@ -263,23 +266,22 @@ let update_itinerary itinerary =
   let destinations = List.map Option.some destinations in
   Db.query
     (<:update< t in $itineraries_table$ := {
-      owner = of_option $Option.map Sql.Value.string itinerary.Result_data.owner$;
-      name = of_option $Option.map Sql.Value.string itinerary.Result_data.name$;
-      favorite = of_option $Option.map Sql.Value.bool itinerary.Result_data.favorite$;
+      owner = $Option.map_default Sql.Value.string$ t.owner $itinerary.Result_data.owner$;
+      name = $Option.map_default Sql.Value.string$ t.name $itinerary.Result_data.name$;
+      favorite = $Option.map_default Sql.Value.bool$ t.favorite $itinerary.Result_data.favorite$;
       departure = $int32:departure_id$;
       destinations = $int32_array:destinations$;
+      vehicle = $int32: itinerary.Result_data.vehicle$;
     } | t.id = $int32:itinerary.Result_data.id$ >>)
 
 let edit_user ~id ~username ~password ~email ~sponsor =
-  Lwt.return_unit
-  (* Db.query *)
-  (*   (<:update< t in $users_table$ := { *)
-  (*     username = of_option $Option.map Sql.Value.string username$; *)
-  (*     email = of_option $Option.map Sql.Value.string email$; *)
-  (*     password = of_option $Option.map Sql.Value.string password$; *)
-  (*     sponsor = of_option $Option.map Sql.Value.bool sponsor$; *)
-  (*     created = $timestamp:t.created$; *)
-  (*   } | t.username = $string:id$ >>) *)
+  Db.query
+    (<:update< t in $users_table$ := {
+      username = $Option.map_default Sql.Value.string$ t.username $username$;
+      email = $Option.map_default Sql.Value.string$ t.email $email$;
+      password = $Option.map_default Sql.Value.string$ t.password $password$;
+      sponsor = $Option.map_default Sql.Value.bool$ t.sponsor $sponsor$;
+    } | t.username = $string:id$ >>)
 
 let delete_itinerary id =
   Db.query (<:delete< t in $itineraries_table$ | t.id = $int32:id$ >>)
@@ -287,3 +289,54 @@ let delete_itinerary id =
 let get_all_itineraries () =
   Db.view (<:view< t | t in $itineraries_table$ >>)
   >>= Lwt_list.map_s to_itinerary
+
+let incidents_id_seq = (<:sequence< serial "incidents_id_seq" >>)
+
+let incidents_table =
+  (<:table< incidents_table (
+    id integer NOT NULL DEFAULT(nextval $incidents_id_seq$),
+    name text NOT NULL,
+    begin_ timestamp NOT NULL DEFAULT(localtimestamp ()),
+    end_ timestamp,
+    position integer NOT NULL
+   ) >>)
+
+let to_incident incident =
+  Db.view_one (<:view< t | t in $coords_table$; t.id = $incident#position$ >>)
+  >|= to_coord >>= fun position ->
+  Lwt.return
+    Incident.{
+    id = incident#!id;
+    name = incident#!name;
+    begin_ = incident#!begin_;
+    end_ = incident#?end_;
+    position;
+  }
+
+let get_incident id =
+  Db.view_one (<:view< t | t in $incidents_table$; t.id = $int32:id$ >>)
+  >>= to_incident >>= fun s -> Lwt.return(Some(s))
+
+let create_incident ~name ~end_ ~position =
+  Db.value (<:value< $incidents_table$?id >>) >>= fun incident_id ->
+  create_coord position >>= fun position_id ->
+  Db.query
+    (<:insert< $incidents_table$ := {
+       id = $int32:incident_id$;
+       name = $string:name$;
+       begin_ = $incidents_table$?begin_;
+       end_ = of_option $Option.map Sql.Value.timestamp end_$;
+       position = $int32:position_id$;
+    } >>)
+  >>= fun () -> get_incident incident_id
+
+let delete_incident id =
+  Db.query (<:delete< t in $incidents_table$ | t.id = $int32:id$ >>)
+
+let get_all_incidents () =
+  Db.view
+    (<:view< t |
+             t in $incidents_table$;
+             (match t.end_ with null -> true | n -> n > localtimestamp ());
+     >>)
+  >>= Lwt_list.map_s to_incident

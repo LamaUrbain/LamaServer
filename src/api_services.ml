@@ -36,44 +36,13 @@ let read_raw_content ?(length = 4096) raw_content =
   let content_stream = Ocsigen_stream.get raw_content in
   Ocsigen_stream.string_of_stream length content_stream
 
-let user_get_handler (id_opt, (search_pattern, (sponsored, _))) () =
-  match id_opt, sponsored with
-  | None, None
-  | None, Some false->
-     begin
-       match search_pattern with
-       | None ->
-	  D.get_all_users ()
-	  >>= fun users ->
-	  send_json
-	    ~code:200
-	    (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
-       | Some pattern ->
-	    D.search_user pattern
-	    >>= fun users ->
-	    send_json
-	      ~code:200
-	      (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
-     end
-  | _, Some true ->
-     D.get_sponsored_users true
-     >>= fun users ->
-     send_json
-       ~code:200
-       (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
-  | Some id, _ ->
-     (
-      D.find_user_username id
-      >>= function
-      | Some u ->
-        send_json
-          ~code:200
-          (Yojson.Safe.to_string (Users.response_to_yojson (Users.to_response u)))
-      | _ ->
-        send_error
-          ~code:404
-          ("User not found")
-    )
+let coord_of_param address loc =
+   let rex = Pcre.regexp "^([-+]?\\d{1,2}([.]\\d+)?),\\s*([-+]?\\d{1,3}([.]\\d+)?)$" in
+    let latlong = match Pcre.pmatch ~rex loc with
+    | true -> Pcre.split ~rex:(Pcre.regexp ",") loc
+    | false -> assert false in
+    let (lat, long) = float_of_string (List.nth latlong 0), float_of_string (List.nth latlong 1) in
+    {latitude = lat; longitude = long; address = address}
 
 let get_token_user t =
   Option.map_default
@@ -93,6 +62,71 @@ let wrap_body_json f get (content_type, raw_content_opt) =
 let wrap_errors f = function
   | `Ok x -> f x
   | `Error x -> send_error ~code:400 ("Provided JSON is not valid: " ^ x)
+
+let incidents_get_handler _ () =
+  D.get_all_incidents ()
+    >>= fun incidents ->
+        send_json
+          ~code:200
+          (Yojson.Safe.to_string (Incident.incidents_response_to_yojson (List.map Incident.to_response incidents)))
+
+let incident_post_handler _ (name ,(address, (position, (end_, _))))  =
+  let end_ = BatOption.map Calendar.from_string end_ in
+  let position = coord_of_param address position in
+  let incident = {name;position;end_} in
+  wrap_errors
+    (fun incident ->
+       D.create_incident
+         ~name:incident.name
+         ~position:incident.position
+         ~end_:incident.end_
+       >>= fun i ->
+       match i with
+       | None -> Lwt.fail_with "There was an incident"
+       | Some inc ->
+         Lwt.return inc >>= (fun i ->
+         send_success ~content:(Yojson.Safe.to_string (Incident.to_yojson (Incident.to_response i))) ()
+           )) (`Ok incident)
+
+let user_get_handler (id_opt, (search_pattern, (sponsored, _))) () =
+  match id_opt, sponsored with
+  | None, None
+  | None, Some false->
+    begin
+      match search_pattern with
+      | None ->
+        D.get_all_users ()
+        >>= fun users ->
+        send_json
+          ~code:200
+          (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
+      | Some pattern ->
+        D.search_user pattern
+        >>= fun users ->
+        send_json
+          ~code:200
+          (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
+    end
+  | _, Some true ->
+    D.get_sponsored_users true
+    >>= fun users ->
+    send_json
+      ~code:200
+      (Yojson.Safe.to_string (Users.users_response_to_yojson (List.map Users.to_response users)))
+  | Some id, _ ->
+    (
+      D.find_user_username id
+      >>= function
+      | Some u ->
+        send_json
+          ~code:200
+          (Yojson.Safe.to_string (Users.response_to_yojson (Users.to_response u)))
+      | _ ->
+        send_error
+          ~code:404
+          ("User not found")
+    )
+
 
 let user_post_handler _ (username ,(password, (email, (sponsor, _))))  =
     let user = {username;password;email} in
@@ -195,46 +229,39 @@ let sessions_delete_handler (token, _) _ =
      >>= fun s -> send_success ~content:"" ()
     ) (`Ok ())
 
-    let check_itinerary_ownership itinerary token =
-    D.get_itinerary itinerary >>= fun i ->
-    match i with
-    | Some itinerary ->
+let check_itinerary_ownership itinerary token =
+  D.get_itinerary itinerary >>= fun i ->
+  match i with
+  | Some itinerary ->
     begin
       if BatOption.default false itinerary.favorite then
-      (
-        match token with
-        | Some t -> (
-          D.find_session t >>= fun s ->
-          match s with
-          | Some session -> if BatOption.is_some @@ BatOption.map ((=) session.owner) itinerary.owner
-          then Lwt.return(Answer(itinerary))
-        else Lwt.return(Error("User not allowed to edit this itinerary"))
-        | None -> Lwt.return(Error("Invalid Session"))
-      )
-        | None -> if Option.is_none itinerary.owner then Lwt.return(Error("No token provided")) else Lwt.return(Answer(itinerary))
-      )
-    else Lwt.return(Answer(itinerary))
-  end
+        (
+          match token with
+          | Some t -> (
+              D.find_session t >>= fun s ->
+              match s with
+              | Some session -> if BatOption.is_some @@ BatOption.map ((=) session.owner) itinerary.owner
+                then Lwt.return(Answer(itinerary))
+                else Lwt.return(Error("User not allowed to edit this itinerary"))
+              | None -> Lwt.return(Error("Invalid Session"))
+            )
+          | None -> if Option.is_none itinerary.owner then  Lwt.return(Answer(itinerary)) else Lwt.return(Error("No token provided"))
+        )
+      else Lwt.return(Answer(itinerary))
+    end
   | None -> Lwt.return(Error("Itinerary not found"))
 
 open Eliom_parameter
 
-let coord_of_param address loc =
-   let rex = Pcre.regexp "^([-+]?\\d{1,2}([.]\\d+)?),\\s*([-+]?\\d{1,3}([.]\\d+)?)$" in
-    let latlong = match Pcre.pmatch ~rex loc with
-    | true -> Pcre.split ~rex:(Pcre.regexp ",") loc
-    | false -> assert false in
-    let (lat, long) = float_of_string (List.nth latlong 0), float_of_string (List.nth latlong 1) in
-    {latitude = lat; longitude = long; address = address}
 
 let () =
 
   let dummy_handler _ _ = Eliom_registration.String.send ~code:201 ("", "") in
 
-  let itinerary_post_handler _ (departure, (departure_address, (destination_address, (favorite, (destination, (name, (token, _))))))) =
+  let itinerary_post_handler _ (departure, (departure_address, (destination_address, (favorite, (destination, (vehicle, (name, (token, _)))))))) =
     let destination = BatOption.map (coord_of_param destination_address) destination in
     let departure = coord_of_param departure_address departure in
-    let coords : Request_data.itinerary_creation = {destination; departure; favorite; name} in
+    let coords : Request_data.itinerary_creation = {destination; departure; favorite; name; vehicle} in
       wrap_errors
         (fun coords ->
 	 get_token_user token >>= (fun owner ->
@@ -251,12 +278,12 @@ let () =
     send_json ~code:200 (Yojson.Safe.to_string (Result_data.itinerary_to_yojson itinerary))
   in
 
-  let itinerary_put_handler (id, (departure, (departure_address, (favorite, (name, (token, any)))))) _ =
+  let itinerary_put_handler (id, (departure, (departure_address, (favorite, (name, (vehicle, (token, any))))))) _ =
     check_itinerary_ownership id token >>= fun it ->
     match it with
     | Answer _ -> (
       let departure = BatOption.map (coord_of_param departure_address) departure in
-      let coords : Request_data.itinerary_edition = {departure; favorite; name} in
+      let coords : Request_data.itinerary_edition = {departure; favorite; name; vehicle} in
       wrap_errors
       (fun coords ->
        Itinerary.edit coords id >>= fun itinerary ->
@@ -381,6 +408,7 @@ let () =
 		    ** opt (string "destination_address")
                     ** opt (bool "favorite")
                     ** opt (string "destination")
+                    ** opt (int32 "vehicle")
                     ** opt (string "name")
                     ** opt (string "token")
 		    ** any
@@ -398,6 +426,7 @@ let () =
 		      ** opt (string "departure_address")
                       ** opt (bool "favorite")
                       ** opt (string "name")
+                      ** opt (int32 "vehicle")
                       ** opt (string "token")
 		      ** any
                      )
@@ -542,3 +571,21 @@ let () =
       ()
   in
   Eliom_registration.Any.register ~service users_put_handler;
+
+  let service =
+    Eliom_service.Http.service
+      ~path:["incidents"]
+      ~get_params:any
+      () in
+  Eliom_registration.Any.register ~service incidents_get_handler;
+
+  let service =
+    Eliom_service.Http.post_service
+      ~fallback:service
+      ~post_params:(string "name"
+                    ** (neopt (string "address"))
+                    ** (string "position")
+                    ** (neopt (string "end")) ** any)
+      ()
+  in
+  Eliom_registration.Any.register ~service incident_post_handler;

@@ -60,9 +60,23 @@ CREATE TABLE itineraries_table (
   favorite boolean,
   departure integer NOT NULL REFERENCES coords_table ON DELETE CASCADE,
   creation timestamp NOT NULL,
-  destinations integer[] NOT NULL -- REFERENCES coords_table ON DELETE CASCADE
+  destinations integer[] NOT NULL, -- REFERENCES coords_table ON DELETE CASCADE
+  vehicle integer NOT NULL
 );
 ALTER TABLE itineraries_table OWNER TO lamaurbain;
 
 CREATE SEQUENCE itineraries_id_seq;
 ALTER SEQUENCE itineraries_id_seq OWNER TO lamaurbain;
+
+CREATE TABLE incidents_table (
+  id integer PRIMARY KEY,
+  name dom_name,
+  begin_ timestamp NOT NULL default CURRENT_timestamp,
+  end_ timestamp NOT NULL,
+  position integer NOT NULL REFERENCES coords_table ON DELETE CASCADE
+);
+
+ALTER TABLE incidents_table OWNER TO lamaurbain;
+
+CREATE SEQUENCE incidents_id_seq;
+ALTER SEQUENCE incidents_id_seq OWNER TO lamaurbain;
