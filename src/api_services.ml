@@ -191,7 +191,7 @@ let gpx_get_handler (token_opt, any) () = match token_opt with
                }
              >>= fun lst ->
                let gpx = Gpx_encoding.to_gpx owner None lst |> Gpx.to_xml in
-               send_xml ~code:200 (Xml.to_string gpx)
+               send_xml ~code:200 (Gpx.X.to_string gpx)
            | _ -> send_error ~code:404 ("User not found")
 
 let users_delete_handler (id, (token, any)) _ =
