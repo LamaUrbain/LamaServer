@@ -156,22 +156,23 @@ end = struct
 
   let self = H.create 16
 
-  let find ~vehicle ((departure, destination) as path) =
-    match H.find self path with
-    | (veh, itinerary) when Int32.equal veh vehicle ->
-        itinerary
-    | _ | exception Not_found ->
-        let departure_point = PointCache.find departure in
-        let destination_point = PointCache.find destination in
-        let itinerary =
-          Option.default_delayed
-            (fun () -> assert false)
-            (Cpp.create departure_point destination_point vehicle)
-        in
-        H.add self path itinerary;
-        itinerary
+  let add ~vehicle ((departure, destination) as path) =
+    let departure_point = PointCache.find departure in
+    let destination_point = PointCache.find destination in
+    let itinerary =
+      Option.default_delayed
+        (fun () -> assert false)
+        (Cpp.create departure_point destination_point vehicle)
+    in
+    H.add self path itinerary;
+    itinerary
 
-  let add ~vehicle path = ignore (find ~vehicle path)
+  let find ~vehicle path =
+    match H.find self path with
+    | itinerary -> itinerary
+    | exception Not_found -> add ~vehicle path
+
+  let add ~vehicle path = ignore (add ~vehicle path)
 end
 
 let () =
