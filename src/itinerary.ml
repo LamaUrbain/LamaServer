@@ -158,9 +158,9 @@ end = struct
 
   let find ~vehicle ((departure, destination) as path) =
     match H.find self path with
-    | itinerary ->
+    | (veh, itinerary) when Int32.equal veh vehicle ->
         itinerary
-    | exception Not_found ->
+    | _ | exception Not_found ->
         let departure_point = PointCache.find departure in
         let destination_point = PointCache.find destination in
         let itinerary =
