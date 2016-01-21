@@ -90,7 +90,7 @@ let rec douglas_peucker epsilon lst =
   else
     lst
 
-let of_gpx { Gpx.wpt; Gpx.metadata; _ } =
+let of_gpx { Gpx.trk; Gpx.metadata; _ } =
   let open Result_data in
   let ( >>= ) a f = match a with Some x -> f x | None -> None in
   let owner = metadata >>= (function { Gpx.author; _ } -> author)
@@ -102,8 +102,8 @@ let of_gpx { Gpx.wpt; Gpx.metadata; _ } =
         { Request_data.latitude = lat
         ; Request_data.longitude = lon
         ; Request_data.address = name }) (* XXX: maybe not name. *)
-      wpt
-    |> douglas_peucker 1. in
+      (List.hd (List.hd trk).Gpx.trkseg).trkpt
+    in
   let creation = "" (* ? *) in
   let favorite = None in
   let departure = List.hd wpt in
