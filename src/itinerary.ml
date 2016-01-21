@@ -324,6 +324,7 @@ let edit {Request_data.name; departure; favorite; vehicle} id =
     | Some favorite -> {itinerary with Result_data.favorite = Some favorite} (* TODO *)
   in
   Db.update_itinerary itinerary >>= fun () ->
+  recache_itineraries itinerary;
   Lwt.return itinerary
 
 let add_destination {Request_data.destination; position} id =
