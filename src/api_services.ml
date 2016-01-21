@@ -176,7 +176,7 @@ let session_get_handler (token_opt, any) () =
           ("User not found")
     )
 
-let gpx_get_handler (token_opt, any) () = match token_opt with
+let to_all_gpx_handler (token_opt, any) () = match token_opt with
      | None -> send_error ~code:404 "Missing token"
      | Some token ->
        D.find_session token
@@ -190,9 +190,43 @@ let gpx_get_handler (token_opt, any) () = match token_opt with
                ; ordering = None
                }
              >>= fun lst ->
-               let gpx = Gpx_encoding.to_gpx owner None lst |> Gpx.to_xml in
+               let gpx = Gpx_encoding.itineraries_to_gpx owner None lst |> Gpx.to_xml in
                send_xml ~code:200 (Gpx.X.to_string gpx)
            | _ -> send_error ~code:404 ("User not found")
+
+let to_gpx_handler (id, (token_opt, any)) () = match token_opt with
+     | None -> send_error ~code:404 "Missing token"
+     | Some token ->
+       D.find_session token
+       >>= function
+           | Some { Sessions.owner; _ } ->
+             Itinerary.get id
+             >>= fun itinerary ->
+               let gpx = Gpx_encoding.itinerary_to_gpx owner None itinerary |> Gpx.to_xml in
+               send_xml ~code:200 (Gpx.X.to_string gpx)
+           | _ -> send_error ~code:404 ("User not found")
+
+let of_gpx_handler (token_opt, any) (gpx, any) = match token_opt with
+     | None -> send_error ~code:404 "Missing token"
+     | Some token ->
+       D.find_session token
+       >>= function
+         | Some { Sessions.owner; _ } ->
+           let result = Gpx_encoding.of_gpx (Gpx.X.of_string gpx |> Gpx.of_xml) in
+           D.create_itinerary
+             ~owner:(Some owner)
+             ~name:result.Result_data.name
+             ~departure:result.Result_data.departure
+             ~destinations:result.Result_data.destinations
+             ~vehicle:result.Result_data.vehicle
+             ~favorite:None
+           >>= (function
+                | None -> send_error ~code:500 ("Error in of_gpx function")
+                | Some i ->
+                  send_json
+                    ~code:200
+                    (Yojson.Safe.to_string (Result_data.itinerary_to_yojson i)))
+          | None -> send_error ~code:404 ("User not found")
 
 let users_delete_handler (id, (token, any)) _ =
   D.find_user_username id >>= fun u ->
@@ -527,20 +561,35 @@ let () =
 
   let service =
     Eliom_service.Http.service
-      ~path:["import"; ""]
+      ~path:["export"]
       ~get_params:(suffix_prod (neopt (string "token")) (any))
       ()
   in
-  Eliom_registration.Any.register ~service gpx_get_handler;
+  Eliom_registration.Any.register ~service to_all_gpx_handler;
+
+  let service =
+     Eliom_service.Http.service
+       ~path:["export"]
+       ~get_params:(suffix_prod (int32 "id") (neopt (string "token") ** any))
+       ()
+  in
+  Eliom_registration.Any.register ~service to_gpx_handler;
+
+  let service =
+     Eliom_service.Http.service
+       ~path:["import"]
+       ~get_params:(suffix_prod (neopt (string "token")) (any))
+       () in
+  Eliom_registration.Any.register ~service
+    (fun (token, any) _ -> send_json ~code:200 "[]");
 
   let service =
      Eliom_service.Http.post_service
        ~fallback:service
-       ~post_params:(string "input" ** (any))
+       ~post_params:(string "gpx" ** any)
        ()
   in
-  Eliom_registration.Any.register ~service
-    (fun _ (input, any) -> send_json ~code:200 "[]");
+  Eliom_registration.Any.register ~service of_gpx_handler;
 
   let service =
     Eliom_service.Http.delete_service

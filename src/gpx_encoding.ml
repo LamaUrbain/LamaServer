@@ -14,6 +14,9 @@ let to_gpx owner name lst =
     ~creator:"LamaUrbain"
     ~rtes:(List.map (fun rte -> Gpx.Make.rte ~routes:(waypoints rte) ()) lst) ()
 
+let itineraries_to_gpx = to_gpx
+let itinerary_to_gpx owner name itinerary = to_gpx owner name [ itinerary ]
+
 module List =
 struct
   include List
@@ -113,5 +116,3 @@ let of_gpx { Gpx.wpt; Gpx.metadata; _ } =
   ; departure
   ; destinations
   ; vehicle = Int32.zero (* ? *) }
-
-
