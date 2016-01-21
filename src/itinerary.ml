@@ -304,6 +304,7 @@ let get_all {Request_data.search; owner; favorite; ordering} =
 let edit {Request_data.name; departure; favorite; vehicle} id =
   get id >>= fun itinerary ->
   let vehicle = Option.default itinerary.Result_data.vehicle vehicle in
+  let itinerary = {itinerary with Result_data.vehicle = vehicle} in
   let itinerary = match name with
     | None -> itinerary
     | Some name -> {itinerary with Result_data.name = Some name} (* TODO *)
